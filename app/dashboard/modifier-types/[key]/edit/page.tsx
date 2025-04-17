@@ -50,7 +50,7 @@ export default function EditModifierTypePage({ params }: { params: { key: string
       } catch (error) {
         toast({
           title: "Erro",
-          description: "Não foi possível carregar os detalhes do tipo de modificador.",
+          description: "Não foi possível carregar os detalhes do modificador.",
           variant: "destructive",
         })
         router.push("/dashboard/modifier-types")
@@ -100,14 +100,15 @@ export default function EditModifierTypePage({ params }: { params: { key: string
 
       await updateModifierType(modifierType.key, modifierTypeData)
       toast({
-        title: "Sucesso",
-        description: "Tipo de modificador atualizado com sucesso.",
+        title: "Sucesso!",
+        description: "Modificador atualizado com sucesso.",
+        variant: "success",
       })
       router.push(`/dashboard/modifier-types/${modifierType.key}`)
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o tipo de modificador.",
+        description: "Não foi possível atualizar o modificador.",
         variant: "destructive",
       })
     } finally {
@@ -126,7 +127,7 @@ export default function EditModifierTypePage({ params }: { params: { key: string
   if (!modifierType) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <h2 className="text-xl font-semibold mb-2">Tipo de modificador não encontrado</h2>
+        <h2 className="text-xl font-semibold mb-2">Modificador não encontrado</h2>
         <Button onClick={() => router.push("/dashboard/modifier-types")}>Voltar para a lista</Button>
       </div>
     )
@@ -143,20 +144,20 @@ export default function EditModifierTypePage({ params }: { params: { key: string
           <ArrowLeft className="h-4 w-4" />
           <span className="sr-only">Voltar</span>
         </Button>
-        <h1 className="text-3xl font-bold">Editar Tipo de Modificador</h1>
+        <h1 className="text-3xl font-bold">Editar Modificador</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>Informações do Tipo de Modificador</CardTitle>
+            <CardTitle>Informações do Modificador</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="key">Chave</Label>
                 <Input id="key" value={modifierType.key} disabled className="bg-muted" />
-                <p className="text-sm text-muted-foreground">A chave não pode ser alterada após a criação</p>
+                <p className="text-sm text-muted-foreground">Identificador único para este modificador (sem espaços, use underscore)</p>
               </div>
 
               <div className="grid gap-3">
@@ -178,7 +179,7 @@ export default function EditModifierTypePage({ params }: { params: { key: string
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="Descreva o tipo de modificador"
+                  placeholder="Descreva o modificador"
                   required
                 />
               </div>
@@ -269,7 +270,7 @@ export default function EditModifierTypePage({ params }: { params: { key: string
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={saving}>
-                  {saving ? "Salvando..." : "Salvar Alterações"}
+                  {loading ? "Atualizando..." : "Atualizar Modificador"}
                 </Button>
               </div>
             </div>

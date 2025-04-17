@@ -141,7 +141,6 @@ export default function CouponsPage() {
                     <TableHead>Desconto</TableHead>
                     <TableHead>Tipo de Produto</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Usos</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -164,7 +163,6 @@ export default function CouponsPage() {
                         </TableCell>
                         <TableCell>{getUsageTypeBadge(coupon.usageType || "ONE_TIME")}</TableCell>
                         <TableCell>{getStatusBadge(coupon.status)}</TableCell>
-                        <TableCell>{coupon.usedCount}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"

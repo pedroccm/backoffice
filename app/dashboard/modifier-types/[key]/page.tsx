@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Edit } from "lucide-react"
 import { getModifierTypeByKey, type ModifierType } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
+import { AlertDialog, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog"
 
 export default function ModifierTypeDetailPage({ params }: { params: { key: string } }) {
   const [modifierType, setModifierType] = useState<ModifierType | null>(null)
@@ -24,7 +25,7 @@ export default function ModifierTypeDetailPage({ params }: { params: { key: stri
       } catch (error) {
         toast({
           title: "Erro",
-          description: "Não foi possível carregar os detalhes do tipo de modificador.",
+          description: "Não foi possível carregar os detalhes do modificador.",
           variant: "destructive",
         })
         router.push("/dashboard/modifier-types")
@@ -47,7 +48,7 @@ export default function ModifierTypeDetailPage({ params }: { params: { key: stri
   if (!modifierType) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <h2 className="text-xl font-semibold mb-2">Tipo de modificador não encontrado</h2>
+        <h2 className="text-xl font-semibold mb-2">Modificador não encontrado</h2>
         <Button onClick={() => router.push("/dashboard/modifier-types")}>Voltar para a lista</Button>
       </div>
     )
@@ -71,7 +72,7 @@ export default function ModifierTypeDetailPage({ params }: { params: { key: stri
 
       <Card>
         <CardHeader>
-          <CardTitle>Detalhes do Tipo de Modificador</CardTitle>
+          <CardTitle>Detalhes do Modificador</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">
@@ -140,6 +141,14 @@ export default function ModifierTypeDetailPage({ params }: { params: { key: stri
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog>
+        <AlertDialogTitle>Excluir Modificador</AlertDialogTitle>
+        <AlertDialogDescription>
+          Tem certeza que deseja excluir este modificador?
+          Esta ação não pode ser desfeita.
+        </AlertDialogDescription>
+      </AlertDialog>
     </div>
   )
 }

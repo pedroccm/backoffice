@@ -47,6 +47,24 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const router = useRouter()
   const { toast } = useToast()
 
+  const formatCurrency = (amount: number, currencyId: string) => {
+    const currency = currencies.find((c) => c.id === currencyId)
+    return currency 
+      ? `${currency.symbol} ${amount.toFixed(2)}`
+      : `${amount.toFixed(2)}`
+  }
+
+  const getCurrencyName = (currencyId: string) => {
+    const currency = currencies.find((c) => c.id === currencyId)
+    return currency?.name || 'N/A'
+  }
+
+  const getModifierName = (modifierTypeId: string | null) => {
+    if (!modifierTypeId) return 'Padrão'
+    const modifier = modifierTypes.find((m) => m.key === modifierTypeId)
+    return modifier?.displayName || 'N/A'
+  }
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -105,16 +123,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const getModifierById = (id: string | null) => {
     if (!id) return null
     return modifierTypes.find((m) => m.key === id)
-  }
-
-  const getModifierInfo = (id: string | null) => {
-    const modifier = getModifierById(id)
-    if (!modifier) return { name: "Nenhum", description: "Sem modificador aplicado" }
-
-    return {
-      name: modifier.displayName,
-      description: modifier.description
-    }
   }
 
   const formatPrice = (price: { amount: number; currencyId: string; modifierTypeId: string | null }) => {
@@ -230,44 +238,30 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <CardTitle>Preços</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {product.prices.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum preço cadastrado.</p>
-              ) : (
-                product.prices.map((price, index) => {
-                  return (
-                    <div key={index} className="border rounded-md p-3">
-                      <div className="grid gap-2">
-                        <div className="flex justify-between">
-                          <h3 className="text-sm font-medium">Valor</h3>
-                          <div className="text-right">
-                            {formatPrice(price)}
-                          </div>
-                        </div>
-                        <div className="flex justify-between">
-                          <h3 className="text-sm font-medium">Moeda</h3>
-                          <p className="text-sm">
-                            {(() => {
-                              const currency = currencies.find((c) => c.id === price.currencyId)
-                              return currency ? `${currency.name} (${currency.symbol})` : price.currencyId
-                            })()}
-                          </p>
-                        </div>
-                        <div className="flex justify-between">
-                          <h3 className="text-sm font-medium">Modificador</h3>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">{getModifierInfo(price.modifierTypeId).name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {getModifierInfo(price.modifierTypeId).description}
-                            </p>
-                          </div>
-                        </div>
+            {product?.prices && product.prices.length > 0 ? (
+              <div className="space-y-4">
+                {product.prices.map((price, index) => (
+                  <div key={index} className="border p-4 rounded-lg">
+                    <div className="grid gap-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Valor:</span>
+                        <span className="text-lg font-semibold">{formatCurrency(price.amount, price.currencyId)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Moeda:</span>
+                        <span>{getCurrencyName(price.currencyId)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Tipo:</span>
+                        <Badge variant="secondary">{getModifierName(price.modifierTypeId)}</Badge>
                       </div>
                     </div>
-                  )
-                })
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground italic">Nenhum preço registrado</p>
+            )}
           </CardContent>
         </Card>
       </div>

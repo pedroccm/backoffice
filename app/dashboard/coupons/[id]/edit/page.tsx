@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function EditCouponPage({ params }: { params: { id: string } }) {
+  const id = use(params).id
   const [coupon, setCoupon] = useState<Coupon | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -32,7 +33,7 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function loadCoupon() {
       try {
-        const data = await getCouponById(params.id)
+        const data = await getCouponById(id)
         setCoupon(data)
         setFormData({
           code: data.code,
@@ -54,7 +55,7 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
     }
 
     loadCoupon()
-  }, [params.id, router, toast])
+  }, [id, router, toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -218,23 +219,6 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Insira um valor entre 1% e 100%. Este cupom aplicará um desconto percentual ao valor do produto.
-                </p>
-              </div>
-
-              <div className="grid gap-3">
-                <Label htmlFor="minPurchaseAmount">Valor Mínimo de Compra (R$)</Label>
-                <Input
-                  id="minPurchaseAmount"
-                  name="minPurchaseAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.minPurchaseAmount === null ? "" : formData.minPurchaseAmount}
-                  onChange={handleNumberChange}
-                  placeholder="Opcional"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Valor mínimo de compra para que o cupom seja válido. Deixe em branco para não definir um valor mínimo.
                 </p>
               </div>
 

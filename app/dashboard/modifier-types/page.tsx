@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import Link from "next/link"
 
 export default function ModifierTypesPage() {
   const [modifierTypes, setModifierTypes] = useState<ModifierType[]>([])
@@ -40,7 +41,7 @@ export default function ModifierTypesPage() {
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os tipos de modificadores.",
+        description: "Não foi possível carregar os modificadores.",
         variant: "destructive",
       })
     } finally {
@@ -54,12 +55,12 @@ export default function ModifierTypesPage() {
       setModifierTypes(modifierTypes.filter((modifierType) => modifierType.key !== key))
       toast({
         title: "Sucesso",
-        description: "Tipo de modificador excluído com sucesso.",
+        description: "Modificador excluído com sucesso.",
       })
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Não foi possível excluir o tipo de modificador.",
+        description: "Não foi possível excluir o modificador.",
         variant: "destructive",
       })
     }
@@ -74,16 +75,18 @@ export default function ModifierTypesPage() {
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Tipos de Modificadores</h1>
-        <Button onClick={() => router.push("/dashboard/modifier-types/new")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Tipo de Modificador
-        </Button>
+        <h1 className="text-2xl font-bold">Modificadores</h1>
+        <Link href="/dashboard/modifier-types/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Modificador
+          </Button>
+        </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Tipos de Modificadores</CardTitle>
+          <CardTitle>Lista de Modificadores</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -91,7 +94,7 @@ export default function ModifierTypesPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Buscar tipos de modificadores..."
+                placeholder="Buscar modificadores..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -116,10 +119,18 @@ export default function ModifierTypesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {modifierTypes.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-4 p-8">
+                      <h2 className="text-xl font-semibold">Nenhum modificador encontrado</h2>
+                      <p className="text-muted-foreground">
+                        Clique no botão acima para criar um novo modificador.
+                      </p>
+                    </div>
+                  )}
                   {filteredModifierTypes.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Nenhum tipo de modificador encontrado.
+                        Nenhum modificador encontrado.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -165,9 +176,9 @@ export default function ModifierTypesPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir tipo de modificador</AlertDialogTitle>
+                                <AlertDialogTitle>Excluir modificador</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir este tipo de modificador? Esta ação não pode ser
+                                  Tem certeza que deseja excluir este modificador? Esta ação não pode ser
                                   desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>

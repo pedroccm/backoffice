@@ -59,6 +59,30 @@ export default function NewProductPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  const calculateAdjustedPrice = (basePrice: number, modifierTypeId: string | null) => {
+    if (!modifierTypeId) return basePrice
+
+    const modifier = modifierTypes.find((m) => m.key === modifierTypeId)
+    if (!modifier) return basePrice
+
+    switch (modifier.displayName.toLowerCase()) {
+      case 'desconto 10%':
+        return basePrice * 0.9
+      case 'desconto 20%':
+        return basePrice * 0.8
+      case 'desconto 30%':
+        return basePrice * 0.7
+      case 'acréscimo 10%':
+        return basePrice * 1.1
+      case 'acréscimo 20%':
+        return basePrice * 1.2
+      case 'acréscimo 30%':
+        return basePrice * 1.3
+      default:
+        return basePrice
+    }
+  }
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -174,18 +198,14 @@ export default function NewProductPage() {
         throw new Error("Por favor, defina um preço válido e selecione uma moeda")
       }
 
-      const selectedCurrencyId = formData.prices[0].currencyId
-      const selectedModifierTypeId = formData.prices[0].modifierTypeId
-
-      if (!checkModifierRestrictions(selectedCurrencyId, selectedModifierTypeId)) {
-        toast({
-          title: "Erro de Validação",
-          description:
-            "Este produto não pode ter mais valores com o modificador selecionado devido às restrições configuradas.",
-          variant: "destructive",
-        })
-        setLoading(false)
-        return
+      // Validar duplicatas de combinação moeda/modificador
+      const priceMap = new Map()
+      for (const price of formData.prices) {
+        const key = `${price.currencyId}-${price.modifierTypeId || 'default'}`
+        if (priceMap.has(key)) {
+          throw new Error("Não é permitido ter dois preços com a mesma combinação de moeda e modificador")
+        }
+        priceMap.set(key, true)
       }
 
       // Filtrar entregáveis vazios
@@ -440,124 +460,157 @@ export default function NewProductPage() {
               </div>
 
               <div className="grid gap-6">
-                <h3 className="text-lg font-medium">Informações de Preço</h3>
-                <div className="grid gap-4 p-4 border rounded-md">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="grid gap-3">
-                      <Label htmlFor="price">Preço Base</Label>
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={formData.prices[0]?.amount || 0}
-                        onChange={(e) => {
-                          const price = e.target.value === "" ? 0 : Number(e.target.value)
-                          setFormData((prev) => ({
-                            ...prev,
-                            prices: [
-                              {
-                                amount: price,
-                                currencyId: prev.prices[0]?.currencyId || "",
-                                modifierTypeId: prev.prices[0]?.modifierTypeId || null,
-                              },
-                              ...prev.prices.slice(1),
-                            ],
-                          }))
-                        }}
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-3">
-                      <Label htmlFor="currencyId">Moeda</Label>
-                      <Select
-                        value={formData.prices[0]?.currencyId || ""}
-                        onValueChange={(value) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            prices: [
-                              {
-                                amount: prev.prices[0]?.amount || 0,
-                                currencyId: value,
-                                modifierTypeId: prev.prices[0]?.modifierTypeId || null,
-                              },
-                              ...prev.prices.slice(1),
-                            ],
-                          }))
-                        }}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma moeda" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencies.map((currency) => (
-                            <SelectItem key={currency.id} value={currency.id}>
-                              {currency.name} ({currency.symbol})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <Label htmlFor="modifierTypeId">Tipo de Modificador</Label>
-                    <TooltipProvider>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={formData.prices[0]?.modifierTypeId || ""}
-                          onValueChange={(value) => {
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Informações de Preço</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      prices: [
+                        ...prev.prices,
+                        { amount: 0, currencyId: "", modifierTypeId: null }
+                      ]
+                    }))
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Preço
+                  </Button>
+                </div>
+                
+                {formData.prices.map((price, index) => (
+                  <div key={index} className="grid gap-4 p-4 border rounded-md">
+                    <div className="flex justify-between items-start">
+                      <h4 className="text-sm font-medium">Preço {index + 1}</h4>
+                      {index > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
                             setFormData((prev) => ({
                               ...prev,
-                              prices: [
-                                {
-                                  amount: prev.prices[0]?.amount || 0,
-                                  currencyId: prev.prices[0]?.currencyId || "",
-                                  modifierTypeId: value === "null" ? null : value,
-                                },
-                                ...prev.prices.slice(1),
-                              ],
+                              prices: prev.prices.filter((_, i) => i !== index)
                             }))
                           }}
                         >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione um modificador (opcional)" />
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <span className="sr-only">Remover preço</span>
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid gap-3">
+                        <Label htmlFor={`price-${index}`}>Preço Base</Label>
+                        <Input
+                          id={`price-${index}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={price.amount}
+                          onChange={(e) => {
+                            const newPrice = e.target.value === "" ? 0 : Number(e.target.value)
+                            setFormData((prev) => ({
+                              ...prev,
+                              prices: prev.prices.map((p, i) =>
+                                i === index
+                                  ? { ...p, amount: newPrice }
+                                  : p
+                              )
+                            }))
+                          }}
+                          required={index === 0}
+                        />
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor={`currency-${index}`}>Moeda</Label>
+                        <Select
+                          value={price.currencyId}
+                          onValueChange={(value) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              prices: prev.prices.map((p, i) =>
+                                i === index
+                                  ? { ...p, currencyId: value }
+                                  : p
+                              )
+                            }))
+                          }}
+                          required={index === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma moeda" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="null">Nenhum modificador</SelectItem>
-                            {modifierTypes.map((modifier) => (
-                              <SelectItem key={modifier.key} value={modifier.key}>
-                                {modifier.displayName}
+                            {currencies.map((currency) => (
+                              <SelectItem key={currency.id} value={currency.id}>
+                                {currency.name} ({currency.symbol})
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" type="button">
-                              <Info className="h-4 w-4" />
-                              <span className="sr-only">Informações sobre modificadores</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-sm">
-                            <p>
-                              Modificadores são variações do produto que não afetam seu preço.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
                       </div>
-                    </TooltipProvider>
+                    </div>
 
-                    {formData.prices[0]?.modifierTypeId && (
-                      <p className="text-sm text-muted-foreground">
-                        {getModifierDescription(formData.prices[0].modifierTypeId)}
-                      </p>
-                    )}
+                    <div className="grid gap-3">
+                      <Label htmlFor={`modifier-${index}`}>Modificador</Label>
+                      <TooltipProvider>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={price.modifierTypeId || ""}
+                            onValueChange={(value) => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                prices: prev.prices.map((p, i) =>
+                                  i === index
+                                    ? { ...p, modifierTypeId: value === "null" ? null : value }
+                                    : p
+                                )
+                              }))
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecione um modificador (opcional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="null">Nenhum modificador</SelectItem>
+                              {modifierTypes.map((modifier) => (
+                                <SelectItem key={modifier.key} value={modifier.key}>
+                                  {modifier.displayName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" type="button">
+                                <Info className="h-4 w-4" />
+                                <span className="sr-only">Informações sobre modificadores</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <p>
+                                Modificadores ajustam o preço base do produto. Podem ser multiplicadores (ex: 1.5x) ou
+                                valores fixos adicionais.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
+
+                      {price.modifierTypeId && (
+                        <div className="mt-4 p-3 bg-muted rounded-md">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Tipo de Preço:</span>
+                            <span className="font-bold">
+                              {modifierTypes.find((m) => m.key === price.modifierTypeId)?.displayName || "Padrão"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
 
               <div className="flex justify-end gap-3">

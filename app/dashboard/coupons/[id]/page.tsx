@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function CouponDetailPage({ params }: { params: { id: string } }) {
+  const id = use(params).id
   const [coupon, setCoupon] = useState<Coupon | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -20,7 +21,7 @@ export default function CouponDetailPage({ params }: { params: { id: string } })
   useEffect(() => {
     async function loadCoupon() {
       try {
-        const data = await getCouponById(params.id)
+        const data = await getCouponById(id)
         setCoupon(data)
       } catch (error) {
         toast({
@@ -35,7 +36,7 @@ export default function CouponDetailPage({ params }: { params: { id: string } })
     }
 
     loadCoupon()
-  }, [params.id, router, toast])
+  }, [id, router, toast])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -133,19 +134,6 @@ export default function CouponDetailPage({ params }: { params: { id: string } })
               <div className="flex items-center">
                 <PercentIcon className="h-4 w-4 mr-1 text-muted-foreground" />
                 <p className="text-lg font-semibold">{coupon.discountValue}%</p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Valor Mínimo de Compra</h3>
-                <p className="text-sm">
-                  {coupon.minPurchaseAmount ? `R$ ${coupon.minPurchaseAmount.toFixed(2)}` : "Não definido"}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Usos Atuais</h3>
-                <p className="text-sm">{coupon.usedCount}</p>
               </div>
             </div>
 

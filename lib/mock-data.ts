@@ -51,37 +51,38 @@ export const mockCurrencies: Currency[] = [
   },
 ]
 
-// Add predefined modifier types to mock data
+// Tipos de modificadores de exemplo
 export const mockModifierTypes: ModifierType[] = [
   {
-    key: "simple",
-    displayName: "Simple",
-    description: "Versão básica do produto",
+    key: "standard",
+    displayName: "Padrão",
+    description: "Versão padrão do produto sem modificações",
     createdBy: "system"
   },
   {
-    key: "max",
-    displayName: "Max",
-    description: "Versão avançada do produto com recursos adicionais",
-    createdBy: "system"
-  },
-  {
-    key: "ultra",
-    displayName: "Ultra",
-    description: "Versão premium do produto com todos os recursos",
+    key: "premium",
+    displayName: "Premium",
+    description: "Versão premium com recursos adicionais",
     createdBy: "system"
   },
   {
     key: "enterprise",
-    displayName: "Enterprise",
+    displayName: "Empresarial",
     description: "Versão empresarial com suporte dedicado",
-    createdBy: "system",
-    valueRestrictions: {
-      maxValues: 1,
-      restrictedCurrencies: ["currency-2"],
-      restrictedProducts: ["Essential Training"],
-    },
+    createdBy: "system"
   },
+  {
+    key: "educational",
+    displayName: "Educacional",
+    description: "Versão com desconto para instituições de ensino",
+    createdBy: "system"
+  },
+  {
+    key: "non_profit",
+    displayName: "Sem Fins Lucrativos",
+    description: "Versão especial para ONGs e instituições sem fins lucrativos",
+    createdBy: "system"
+  }
 ]
 
 // Entregáveis de exemplo
@@ -89,35 +90,43 @@ export const mockDeliverables: Deliverable[] = [
   {
     id: "del-1",
     name: "Manual do Usuário",
-    description: "Manual completo com instruções de uso",
+    description: "Manual completo com instruções de uso do sistema",
     productId: "prod-1",
     createdAt: new Date(2023, 0, 15).toISOString(),
     updatedAt: new Date(2023, 0, 15).toISOString(),
   },
   {
     id: "del-2",
-    name: "Garantia Estendida",
-    description: "Documento de garantia estendida por 2 anos",
+    name: "Treinamento Inicial",
+    description: "Sessão de treinamento online para uso do sistema",
     productId: "prod-1",
     createdAt: new Date(2023, 0, 15).toISOString(),
     updatedAt: new Date(2023, 0, 15).toISOString(),
   },
   {
     id: "del-3",
-    name: "Certificado de Autenticidade",
-    description: "Certificado que comprova a autenticidade do produto",
-    productId: "prod-3",
+    name: "Material do Curso",
+    description: "Material didático completo do curso",
+    productId: "prod-2",
     createdAt: new Date(2023, 2, 10).toISOString(),
     updatedAt: new Date(2023, 2, 10).toISOString(),
   },
   {
     id: "del-4",
-    name: "Guia de Instalação",
-    description: "Guia passo a passo para instalação do produto",
-    productId: "prod-4",
+    name: "Certificado",
+    description: "Certificado digital de conclusão",
+    productId: "prod-2",
     createdAt: new Date(2023, 3, 5).toISOString(),
     updatedAt: new Date(2023, 3, 5).toISOString(),
   },
+  {
+    id: "del-5",
+    name: "Relatório de Consultoria",
+    description: "Relatório detalhado com análises e recomendações",
+    productId: "prod-3",
+    createdAt: new Date(2023, 3, 5).toISOString(),
+    updatedAt: new Date(2023, 3, 5).toISOString(),
+  }
 ]
 
 // Diretrizes de exemplo
@@ -164,113 +173,162 @@ export const mockGuidelines: Guideline[] = [
   },
 ]
 
-// Produtos de exemplo - Updated with modifiers
+// Produtos de exemplo atualizados
 export const mockProducts: Product[] = [
   {
     id: "prod-1",
-    name: "Smartphone XYZ Pro",
-    description: "Smartphone de última geração com câmera de alta resolução e processador potente",
-    productType: "ONE_TIME",
+    name: "Software de Gestão Empresarial",
+    description: "Sistema completo para gestão empresarial com módulos de finanças, RH e vendas",
+    productType: "RECURRENT",
     status: "ACTIVE",
-    singleItemOnly: false,
+    singleItemOnly: true,
     categoryId: "cat-1",
     prices: [
       {
-        amount: 2499.99,
+        id: "price-1",
+        amount: 199.90,
         currencyId: "curr-1",
-        modifierTypeId: "max",
+        modifierTypeId: "standard"
       },
+      {
+        id: "price-2",
+        amount: 399.90,
+        currencyId: "curr-1",
+        modifierTypeId: "premium"
+      },
+      {
+        id: "price-3",
+        amount: 999.90,
+        currencyId: "curr-1",
+        modifierTypeId: "enterprise"
+      },
+      {
+        id: "price-4",
+        amount: 49.90,
+        currencyId: "curr-1",
+        modifierTypeId: "educational"
+      }
     ],
     deliverables: [
       {
         id: "del-1",
         name: "Manual do Usuário",
-        description: "Manual completo com instruções de uso",
-        productId: "prod-1",
-        createdAt: new Date(2023, 0, 15).toISOString(),
-        updatedAt: new Date(2023, 0, 15).toISOString(),
+        description: "Manual completo com instruções de uso do sistema",
+        productId: "prod-1"
       },
       {
         id: "del-2",
-        name: "Garantia Estendida",
-        description: "Documento de garantia estendida por 2 anos",
-        productId: "prod-1",
-        createdAt: new Date(2023, 0, 15).toISOString(),
-        updatedAt: new Date(2023, 0, 15).toISOString(),
-      },
+        name: "Treinamento Inicial",
+        description: "Sessão de treinamento online para uso do sistema",
+        productId: "prod-1"
+      }
     ],
-    guidelines: [],
-    createdBy: "system",
-    createdAt: new Date(2023, 0, 15).toISOString(),
-    updatedAt: new Date(2023, 0, 15).toISOString(),
-  },
-  {
-    id: "prod-2",
-    name: "Camiseta Premium",
-    description: "Camiseta de algodão de alta qualidade com design exclusivo",
-    productType: "ONE_TIME",
-    status: "ACTIVE",
-    singleItemOnly: false,
-    categoryId: "cat-2",
-    prices: [
-      {
-        amount: 89.9,
-        currencyId: "curr-1",
-        modifierTypeId: "simple",
-      },
-    ],
-    deliverables: [],
     guidelines: [
       {
         id: "guide-1",
-        name: "Instruções de Limpeza",
-        description: "Como limpar e manter o produto em boas condições",
-        productId: "prod-2",
-        createdAt: new Date(2023, 1, 20).toISOString(),
-        updatedAt: new Date(2023, 1, 20).toISOString(),
-      },
-      {
-        id: "guide-2",
-        name: "Recomendações de Uso",
-        description: "Melhores práticas para utilização do produto",
-        productId: "prod-2",
-        createdAt: new Date(2023, 1, 20).toISOString(),
-        updatedAt: new Date(2023, 1, 20).toISOString(),
-      },
+        name: "Requisitos do Sistema",
+        description: "Requisitos mínimos de hardware e software",
+        productId: "prod-1"
+      }
     ],
     createdBy: "system",
-    createdAt: new Date(2023, 1, 20).toISOString(),
-    updatedAt: new Date(2023, 1, 20).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
-    id: "prod-3",
-    name: "Relógio de Parede Vintage",
-    description: "Relógio de parede com design vintage, perfeito para decoração",
+    id: "prod-2",
+    name: "Curso de Marketing Digital",
+    description: "Curso completo de marketing digital com certificação",
     productType: "ONE_TIME",
     status: "ACTIVE",
-    singleItemOnly: true,
-    categoryId: "cat-3",
+    singleItemOnly: false,
+    categoryId: "cat-5",
     prices: [
       {
-        amount: 149.9,
+        id: "price-5",
+        amount: 997.00,
         currencyId: "curr-1",
-        modifierTypeId: "ultra",
+        modifierTypeId: "standard"
       },
+      {
+        id: "price-6",
+        amount: 199.00,
+        currencyId: "curr-1",
+        modifierTypeId: "educational"
+      },
+      {
+        id: "price-7",
+        amount: 199.00,
+        currencyId: "curr-2",
+        modifierTypeId: "standard"
+      }
     ],
     deliverables: [
       {
         id: "del-3",
-        name: "Certificado de Autenticidade",
-        description: "Certificado que comprova a autenticidade do produto",
-        productId: "prod-3",
-        createdAt: new Date(2023, 2, 10).toISOString(),
-        updatedAt: new Date(2023, 2, 10).toISOString(),
+        name: "Material do Curso",
+        description: "Material didático completo do curso",
+        productId: "prod-2"
       },
+      {
+        id: "del-4",
+        name: "Certificado",
+        description: "Certificado digital de conclusão",
+        productId: "prod-2"
+      }
     ],
     guidelines: [],
     createdBy: "system",
-    createdAt: new Date(2023, 2, 10).toISOString(),
-    updatedAt: new Date(2023, 2, 10).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "prod-3",
+    name: "Consultoria Especializada",
+    description: "Serviço de consultoria empresarial personalizada",
+    productType: "ONE_TIME",
+    status: "ACTIVE",
+    singleItemOnly: true,
+    categoryId: "cat-1",
+    prices: [
+      {
+        id: "price-8",
+        amount: 5000.00,
+        currencyId: "curr-1",
+        modifierTypeId: null
+      },
+      {
+        id: "price-9",
+        amount: 1000.00,
+        currencyId: "curr-2",
+        modifierTypeId: null
+      },
+      {
+        id: "price-10",
+        amount: 900.00,
+        currencyId: "curr-3",
+        modifierTypeId: null
+      }
+    ],
+    deliverables: [
+      {
+        id: "del-5",
+        name: "Relatório de Consultoria",
+        description: "Relatório detalhado com análises e recomendações",
+        productId: "prod-3"
+      }
+    ],
+    guidelines: [
+      {
+        id: "guide-2",
+        name: "Termos de Serviço",
+        description: "Termos e condições da consultoria",
+        productId: "prod-3"
+      }
+    ],
+    createdBy: "system",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     id: "prod-4",
@@ -404,8 +462,6 @@ export const mockCoupons = [
     code: "WELCOME10",
     discountType: "PERCENTAGE",
     discountValue: 10,
-    minPurchaseAmount: null,
-    usedCount: 45,
     status: "ACTIVE",
     usageType: "ONE_TIME",
     createdAt: "2023-01-01T00:00:00Z",
@@ -416,8 +472,6 @@ export const mockCoupons = [
     code: "SUMMER25",
     discountType: "PERCENTAGE",
     discountValue: 25,
-    minPurchaseAmount: 100,
-    usedCount: 12,
     status: "ACTIVE",
     usageType: "RECURRING",
     createdAt: "2023-06-01T00:00:00Z",
@@ -428,11 +482,118 @@ export const mockCoupons = [
     code: "FLASH50",
     discountType: "PERCENTAGE",
     discountValue: 50,
-    minPurchaseAmount: 200,
-    usedCount: 20,
     status: "EXPIRED",
     usageType: "ONE_TIME",
     createdAt: "2023-05-14T00:00:00Z",
     updatedAt: "2023-05-17T00:00:00Z",
   },
+]
+
+// Ofertas de exemplo
+export const mockOffers = [
+  {
+    id: "offer-1",
+    leadName: "Empresa ABC Ltda",
+    leadEmail: "contato@abcltda.com",
+    status: "CONVERTED",
+    type: "RECURRENT",
+    subtotal: 999.90,
+    total: 999.90,
+    items: [
+      {
+        productId: "prod-1",
+        priceId: "price-3", // enterprise
+        quantity: 1
+      }
+    ],
+    createdBy: "system",
+    createdAt: new Date(2023, 11, 15).toISOString(),
+    updatedAt: new Date(2023, 11, 15).toISOString(),
+    convertedAt: new Date(2023, 11, 16).toISOString()
+  },
+  {
+    id: "offer-2",
+    leadName: "Universidade XYZ",
+    leadEmail: "compras@xyz.edu",
+    status: "CONVERTED",
+    type: "ONE_TIME",
+    subtotal: 398.00,
+    total: 398.00,
+    items: [
+      {
+        productId: "prod-2",
+        priceId: "price-6", // educational
+        quantity: 2
+      }
+    ],
+    createdBy: "system",
+    createdAt: new Date(2023, 11, 10).toISOString(),
+    updatedAt: new Date(2023, 11, 12).toISOString(),
+    convertedAt: new Date(2023, 11, 12).toISOString()
+  },
+  {
+    id: "offer-3",
+    leadName: "Consultoria DEF",
+    leadEmail: "financeiro@def.com",
+    status: "PENDING",
+    type: "ONE_TIME",
+    subtotal: 5000.00,
+    total: 5000.00,
+    items: [
+      {
+        productId: "prod-3",
+        priceId: "price-8", // BRL sem modificador
+        quantity: 1
+      }
+    ],
+    createdBy: "system",
+    createdAt: new Date(2023, 11, 18).toISOString(),
+    updatedAt: new Date(2023, 11, 18).toISOString(),
+    convertedAt: null
+  },
+  {
+    id: "offer-4",
+    leadName: "Tech Solutions Inc",
+    leadEmail: "purchase@techsolutions.com",
+    status: "PENDING",
+    type: "RECURRENT",
+    subtotal: 599.70,
+    total: 599.70,
+    items: [
+      {
+        productId: "prod-1",
+        priceId: "price-2", // premium
+        quantity: 1
+      },
+      {
+        productId: "prod-2",
+        priceId: "price-7", // standard USD
+        quantity: 1
+      }
+    ],
+    createdBy: "system",
+    createdAt: new Date(2023, 11, 20).toISOString(),
+    updatedAt: new Date(2023, 11, 20).toISOString(),
+    convertedAt: null
+  },
+  {
+    id: "offer-5",
+    leadName: "ONG Educação Para Todos",
+    leadEmail: "projetos@educacaoparatodos.org",
+    status: "CONVERTED",
+    type: "ONE_TIME",
+    subtotal: 149.70,
+    total: 149.70,
+    items: [
+      {
+        productId: "prod-1",
+        priceId: "price-4", // educational
+        quantity: 3
+      }
+    ],
+    createdBy: "system",
+    createdAt: new Date(2023, 11, 5).toISOString(),
+    updatedAt: new Date(2023, 11, 7).toISOString(),
+    convertedAt: new Date(2023, 11, 7).toISOString()
+  }
 ]

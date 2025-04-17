@@ -81,8 +81,6 @@ interface Coupon {
   code: string
   discountType: string // Will always be "PERCENTAGE" now
   discountValue: number
-  minPurchaseAmount: number | null
-  usedCount: number
   status: string
   usageType: "ONE_TIME" | "RECURRING" // New field
   createdAt: string
@@ -723,9 +721,10 @@ export type OfferItem = {
 }
 
 export async function getProductOffers(productId: string): Promise<Offer[]> {
-  // TODO: Implementar integração com a API
-  // Por enquanto, retorna um array vazio
-  return []
+  await delay();
+  return mockOffers.filter(offer => 
+    offer.items.some(item => item.productId === productId)
+  );
 }
 
 export async function getOffers(): Promise<Offer[]> {
@@ -822,6 +821,65 @@ export async function removeProductFromOffer(offerId: string, itemId: string): P
       offers[offerIndex].total = subtotal // Por enquanto sem desconto
 
       resolve({ ...offers[offerIndex] })
+    }, 500)
+  })
+}
+
+export async function createOffer(offer: {
+  leadId: string
+  leadName: string
+  type: "ONE_TIME" | "RECURRENT"
+  items?: {
+    productId: string
+    productPriceId: string
+    quantity: number
+  }[]
+}): Promise<Offer> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newOffer: Offer = {
+        id: `offer-${offers.length + 1}`,
+        leadId: offer.leadId,
+        leadName: offer.leadName,
+        status: "OPEN",
+        type: offer.type,
+        subtotal: 0,
+        total: 0,
+        items: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      // Se houver itens, adiciona-os à oferta
+      if (offer.items && offer.items.length > 0) {
+        for (const item of offer.items) {
+          const product = products.find(p => p.id === item.productId)
+          if (!product) continue
+
+          const price = product.prices.find(p => p.currencyId === item.productPriceId)
+          if (!price) continue
+
+          const newItem: OfferItem = {
+            id: `item-${offerItems.length + 1}`,
+            offerId: newOffer.id,
+            productId: item.productId,
+            productPriceId: item.productPriceId,
+            quantity: item.quantity,
+            unitPrice: price.amount,
+            lineTotal: price.amount * item.quantity
+          }
+
+          offerItems.push(newItem)
+          newOffer.items.push(newItem)
+        }
+
+        // Calcula os totais
+        newOffer.subtotal = newOffer.items.reduce((acc, item) => acc + item.lineTotal, 0)
+        newOffer.total = newOffer.subtotal // Por enquanto sem desconto
+      }
+
+      offers.push(newOffer)
+      resolve({ ...newOffer })
     }, 500)
   })
 }

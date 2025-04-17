@@ -20,7 +20,6 @@ export default function NewCouponPage() {
   const [formData, setFormData] = useState({
     code: "",
     discountValue: 10, // Default value
-    minPurchaseAmount: null as number | null,
     status: "ACTIVE",
     usageType: "ONE_TIME" as "ONE_TIME" | "RECURRING",
   })
@@ -167,23 +166,6 @@ export default function NewCouponPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Insira um valor entre 1% e 100%. Este cupom aplicará um desconto percentual ao valor do produto.
-                </p>
-              </div>
-
-              <div className="grid gap-3">
-                <Label htmlFor="minPurchaseAmount">Valor Mínimo de Compra (R$)</Label>
-                <Input
-                  id="minPurchaseAmount"
-                  name="minPurchaseAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.minPurchaseAmount === null ? "" : formData.minPurchaseAmount}
-                  onChange={handleNumberChange}
-                  placeholder="Opcional"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Valor mínimo de compra para que o cupom seja válido. Deixe em branco para não definir um valor mínimo.
                 </p>
               </div>
 

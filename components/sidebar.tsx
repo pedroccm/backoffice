@@ -117,7 +117,7 @@ export function Sidebar() {
                       onClick={close}
                     >
                       <Settings className="mr-2 h-4 w-4" />
-                      Tipos de Modificadores
+                      Modificadores
                     </Button>
                   </Link>
                 </div>

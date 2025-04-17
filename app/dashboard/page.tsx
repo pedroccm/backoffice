@@ -87,7 +87,7 @@ export default function Dashboard() {
           <Link href="/dashboard/modifier-types">
             <Card className="dashboard-card border-l-4 border-l-accent-500">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium">Tipos de Modificadores</CardTitle>
+                <CardTitle className="text-sm font-medium">Modificadores</CardTitle>
                 <Settings className="h-4 w-4 text-accent-600" />
               </CardHeader>
               <CardContent>
