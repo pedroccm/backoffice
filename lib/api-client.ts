@@ -888,4 +888,33 @@ export async function createOffer(offer: {
   })
 }
 
+export async function createCategory(category: Omit<Category, "id">): Promise<Category> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newCategory: Category = {
+        id: `cat-${categories.length + 1}`,
+        ...category,
+      }
+      categories.push(newCategory)
+      resolve(newCategory)
+    }, 500)
+  })
+}
+
+export async function createDeliverable(deliverable: Omit<Deliverable, "id" | "productId" | "createdAt" | "updatedAt">): Promise<Deliverable> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newDeliverable: Deliverable = {
+        id: `del-${deliverables.length + 1}`,
+        ...deliverable,
+        productId: "", // Será preenchido quando associado a um produto
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      deliverables.push(newDeliverable)
+      resolve(newDeliverable)
+    }, 500)
+  })
+}
+
 export type { Product, Category, Currency, Deliverable, Guideline, ModifierType, Coupon }

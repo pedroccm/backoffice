@@ -178,14 +178,6 @@ export default function ProductsPage() {
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">Ver</span>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.push(`/dashboard/products/${product.id}/edit`)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

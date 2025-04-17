@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Eye } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { getCategories, type Category } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -18,10 +18,10 @@ export default function CategoriesPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    async function loadCategories() {
+    async function loadData() {
       try {
-        const data = await getCategories()
-        setCategories(data)
+        const categoriesData = await getCategories()
+        setCategories(categoriesData)
       } catch (error) {
         toast({
           title: "Erro",
@@ -33,7 +33,7 @@ export default function CategoriesPage() {
       }
     }
 
-    loadCategories()
+    loadData()
   }, [toast])
 
   const filteredCategories = categories.filter(
@@ -81,13 +81,12 @@ export default function CategoriesPage() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCategories.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={2} className="text-center py-8 text-muted-foreground">
                         Nenhuma categoria encontrada.
                       </TableCell>
                     </TableRow>
@@ -96,16 +95,6 @@ export default function CategoriesPage() {
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell>{category.description}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.push(`/dashboard/categories/${category.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">Ver</span>
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

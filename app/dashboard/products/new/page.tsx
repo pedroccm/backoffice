@@ -52,9 +52,8 @@ export default function NewProductPage() {
   const [selectedDeliverables, setSelectedDeliverables] = useState<
     Array<{
       id: string
-      quantity: number
     }>
-  >([{ id: "", quantity: 1 }])
+  >([{ id: "" }])
   const [selectedGuidelineIds, setSelectedGuidelineIds] = useState<string[]>([])
   const router = useRouter()
   const { toast } = useToast()
@@ -119,14 +118,14 @@ export default function NewProductPage() {
     setFormData((prev) => ({ ...prev, [name]: checked }))
   }
 
-  const handleDeliverableChange = (index: number, field: string, value: string | number) => {
+  const handleDeliverableChange = (index: number, field: string, value: string) => {
     const updatedDeliverables = [...selectedDeliverables]
     updatedDeliverables[index] = { ...updatedDeliverables[index], [field]: value }
     setSelectedDeliverables(updatedDeliverables)
   }
 
   const addDeliverable = () => {
-    setSelectedDeliverables([...selectedDeliverables, { id: "", quantity: 1 }])
+    setSelectedDeliverables([...selectedDeliverables, { id: "" }])
   }
 
   const removeDeliverable = (index: number) => {
@@ -221,7 +220,7 @@ export default function NewProductPage() {
         return {
           id: d.id,
           name: deliverable.name,
-          description: `${deliverable.description} (Quantidade: ${d.quantity})`,
+          description: deliverable.description,
           productId: "", // Será preenchido pelo backend
         }
       })
@@ -342,7 +341,7 @@ export default function NewProductPage() {
                   checked={formData.singleItemOnly}
                   onCheckedChange={(checked) => handleSwitchChange("singleItemOnly", checked)}
                 />
-                <Label htmlFor="singleItemOnly">Apenas um item pode ser adquirido</Label>
+                <Label htmlFor="singleItemOnly">Apenas um item por produto</Label>
               </div>
 
               <div className="grid gap-3">
@@ -409,19 +408,6 @@ export default function NewProductPage() {
                         <p>{getDeliverableById(deliverable.id)?.description}</p>
                       </div>
                     )}
-
-                    <div className="grid gap-3">
-                      <Label htmlFor={`deliverable-quantity-${index}`}>Quantidade</Label>
-                      <Input
-                        id={`deliverable-quantity-${index}`}
-                        type="number"
-                        min="1"
-                        value={deliverable.quantity}
-                        onChange={(e) =>
-                          handleDeliverableChange(index, "quantity", Number.parseInt(e.target.value) || 1)
-                        }
-                      />
-                    </div>
                   </div>
                 ))}
               </div>

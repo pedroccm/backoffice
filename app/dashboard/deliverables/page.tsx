@@ -6,20 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Trash2 } from "lucide-react"
-import { getDeliverables, deleteDeliverable, type Deliverable } from "@/lib/api-client"
+import { Plus, Search } from "lucide-react"
+import { getDeliverables, type Deliverable } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 
 export default function DeliverablesPage() {
   const [deliverables, setDeliverables] = useState<Deliverable[]>([])
@@ -29,40 +18,23 @@ export default function DeliverablesPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    loadDeliverables()
-  }, [])
-
-  async function loadDeliverables() {
-    try {
-      const data = await getDeliverables()
-      setDeliverables(data)
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os entregáveis.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
+    async function loadData() {
+      try {
+        const deliverablesData = await getDeliverables()
+        setDeliverables(deliverablesData)
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os entregáveis.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDeliverable(id)
-      setDeliverables(deliverables.filter((deliverable) => deliverable.id !== id))
-      toast({
-        title: "Sucesso",
-        description: "Entregável excluído com sucesso.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o entregável.",
-        variant: "destructive",
-      })
-    }
-  }
+    loadData()
+  }, [toast])
 
   const filteredDeliverables = deliverables.filter(
     (deliverable) =>
@@ -109,14 +81,12 @@ export default function DeliverablesPage() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredDeliverables.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={2} className="text-center py-8 text-muted-foreground">
                         Nenhum entregável encontrado.
                       </TableCell>
                     </TableRow>
@@ -125,31 +95,6 @@ export default function DeliverablesPage() {
                       <TableRow key={deliverable.id}>
                         <TableCell className="font-medium">{deliverable.name}</TableCell>
                         <TableCell>{deliverable.description}</TableCell>
-                        <TableCell>{deliverable.productId}</TableCell>
-                        <TableCell className="text-right">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                                <span className="sr-only">Excluir</span>
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir entregável</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir este entregável? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(deliverable.id)}>
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}
