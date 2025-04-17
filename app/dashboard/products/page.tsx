@@ -136,7 +136,6 @@ export default function ProductsPage() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Categoria</TableHead>
-                    <TableHead>Modificador</TableHead>
                     <TableHead>Preço</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -144,7 +143,7 @@ export default function ProductsPage() {
                 <TableBody>
                   {filteredProducts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Nenhum produto encontrado.
                       </TableCell>
                     </TableRow>
@@ -159,11 +158,6 @@ export default function ProductsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{getCategoryName(product.categoryId)}</TableCell>
-                        <TableCell>
-                          {product.prices && product.prices.length > 0
-                            ? getModifierName(product.prices[0].modifierTypeId)
-                            : "N/A"}
-                        </TableCell>
                         <TableCell>
                           {product.prices && product.prices.length > 0
                             ? formatPrice(product.prices[0])
