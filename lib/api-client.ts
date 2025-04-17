@@ -720,17 +720,21 @@ export type OfferItem = {
   lineTotal: number
 }
 
-export async function getProductOffers(productId: string): Promise<Offer[]> {
-  await delay();
-  return mockOffers.filter(offer => 
-    offer.items.some(item => item.productId === productId)
-  );
-}
-
 export async function getOffers(): Promise<Offer[]> {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve([...offers])
+    }, 500)
+  })
+}
+
+export async function getProductOffers(productId: string): Promise<Offer[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const productOffers = offers.filter(offer => 
+        offer.items.some(item => item.productId === productId)
+      )
+      resolve([...productOffers])
     }, 500)
   })
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -16,58 +15,56 @@ import { createModifierType } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Loader2 } from "lucide-react"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+const formSchema = z.object({
+  key: z.string().min(1, "A chave é obrigatória"),
+  displayName: z.string().min(1, "O nome de exibição é obrigatório"),
+  description: z.string().min(1, "A descrição é obrigatória"),
+  hasRestrictions: z.boolean().default(false),
+  valueRestrictions: z.object({
+    maxValues: z.number().min(1).default(1),
+    restrictedCurrencies: z.array(z.string()).default([]),
+    restrictedProducts: z.array(z.string()).default([])
+  }).optional()
+})
+
+type FormValues = z.infer<typeof formSchema>
 
 export default function NewModifierTypePage() {
   const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    key: "",
-    displayName: "",
-    description: "",
-    createdBy: "system",
-    hasRestrictions: false,
-    valueRestrictions: {
-      maxValues: 1,
-      restrictedCurrencies: [] as string[],
-      restrictedProducts: [] as string[],
-    },
-  })
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      hasRestrictions: checked,
-    }))
-  }
-
-  const handleRestrictionChange = (field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      key: "",
+      displayName: "",
+      description: "",
+      hasRestrictions: false,
       valueRestrictions: {
-        ...prev.valueRestrictions,
-        [field]: value,
-      },
-    }))
-  }
+        maxValues: 1,
+        restrictedCurrencies: [],
+        restrictedProducts: []
+      }
+    }
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const hasRestrictions = form.watch("hasRestrictions")
+
+  const onSubmit = async (data: FormValues) => {
     setLoading(true)
 
     try {
-      // Format the data for API
       const modifierTypeData = {
-        key: formData.key,
-        displayName: formData.displayName,
-        description: formData.description,
-        createdBy: formData.createdBy,
-        valueRestrictions: formData.hasRestrictions ? formData.valueRestrictions : null,
+        key: data.key,
+        displayName: data.displayName,
+        description: data.description,
+        createdBy: "system",
+        valueRestrictions: data.hasRestrictions ? data.valueRestrictions : null,
       }
 
       await createModifierType(modifierTypeData)
@@ -88,19 +85,6 @@ export default function NewModifierTypePage() {
     }
   }
 
-  const form = {
-    handleSubmit,
-    control: {
-      register: (name: string) => ({
-        name,
-        value: formData[name as keyof typeof formData],
-        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => handleChange(e),
-      }),
-    },
-  }
-
-  const isLoading = loading
-
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
@@ -108,7 +92,7 @@ export default function NewModifierTypePage() {
       </div>
       <div className="grid gap-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="key"
@@ -148,16 +132,25 @@ export default function NewModifierTypePage() {
                 </FormItem>
               )}
             />
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="hasRestrictions"
-                checked={formData.hasRestrictions}
-                onCheckedChange={handleSwitchChange}
-              />
-              <Label htmlFor="hasRestrictions">Aplicar restrições de valores</Label>
-            </div>
+            <FormField
+              control={form.control}
+              name="hasRestrictions"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center space-x-2">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Aplicar restrições de valores</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-            {formData.hasRestrictions && (
+            {hasRestrictions && (
               <div className="grid gap-6 p-4 border rounded-md bg-muted/30">
                 <h3 className="text-lg font-medium">Configuração de Restrições</h3>
 
@@ -170,7 +163,7 @@ export default function NewModifierTypePage() {
                         <FormLabel>Número Máximo de Valores</FormLabel>
                         <FormControl>
                           <Select
-                            value={field.value?.toString() || "1"}
+                            value={field.value?.toString()}
                             onValueChange={(value) => field.onChange(Number.parseInt(value))}
                           >
                             <SelectTrigger>
@@ -206,9 +199,9 @@ export default function NewModifierTypePage() {
                             <div className="flex items-center space-x-2">
                               <Switch
                                 id="restrictUSD"
-                                checked={field.value.includes("curr-2")}
+                                checked={field.value?.includes("curr-2")}
                                 onCheckedChange={(checked) => {
-                                  const currencies = [...field.value]
+                                  const currencies = [...(field.value || [])]
                                   if (checked) {
                                     currencies.push("curr-2") // USD currency ID
                                   } else {
@@ -224,9 +217,9 @@ export default function NewModifierTypePage() {
                             <div className="flex items-center space-x-2">
                               <Switch
                                 id="restrictTraining"
-                                checked={field.value.includes("Essential Training")}
+                                checked={field.value?.includes("Essential Training")}
                                 onCheckedChange={(checked) => {
-                                  const products = [...field.value]
+                                  const products = [...(field.value || [])]
                                   if (checked) {
                                     products.push("Essential Training")
                                   } else {
@@ -255,9 +248,15 @@ export default function NewModifierTypePage() {
               <Button variant="outline" type="button" onClick={() => router.push("/dashboard/modifier-types")}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Criar Modificador
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  "Criar Modificador"
+                )}
               </Button>
             </div>
           </form>
