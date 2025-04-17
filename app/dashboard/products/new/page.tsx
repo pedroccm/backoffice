@@ -341,7 +341,7 @@ export default function NewProductPage() {
                   checked={formData.singleItemOnly}
                   onCheckedChange={(checked) => handleSwitchChange("singleItemOnly", checked)}
                 />
-                <Label htmlFor="singleItemOnly">Apenas um item por produto</Label>
+                <Label htmlFor="singleItemOnly">Apenas um item por carrinho</Label>
               </div>
 
               <div className="grid gap-3">
