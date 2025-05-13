@@ -1,3 +1,5 @@
+import { PaymentMethod } from "@/lib/api-fetch";
+
 // Debugging helper
 function logDebug(message: string, data?: any) {
   console.log(`[API Client] ${message}`, data ? data : "")
@@ -13,18 +15,20 @@ interface Guideline {
   updatedAt: string
 }
 
-interface Product {
+// Interface unificada de Product
+export type Product = {
   id: string
   name: string
   description: string
-  productType: string
-  status: string
-  singleItemOnly: boolean
-  categoryId: string
-  prices: { amount: number; currencyId: string; modifierTypeId: string | null }[]
-  deliverables: Deliverable[]
-  guidelines: Guideline[]
-  createdBy: string
+  productType?: string
+  paymentType?: "ONE_TIME" | "RECURRENT"
+  status?: string
+  singleItemOnly?: boolean
+  categoryId?: string
+  prices: { amount: number; currencyId: string; modifierTypeId?: string | null }[]
+  deliverables?: Deliverable[]
+  guidelines?: Guideline[]
+  createdBy?: string
   createdAt: string
   updatedAt: string
 }
@@ -91,6 +95,16 @@ const modifierTypes: ModifierType[] = []
 let coupons: Coupon[] = []
 const offers: Offer[] = []
 const offerItems: OfferItem[] = []
+
+// Adicionar a interface Installment
+export interface Installment {
+  id: string;
+  installment: number;
+  discountPercentage: number;
+  paymentMethodId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Function to calculate adjusted price based on modifier
 export function calculateAdjustedPrice(basePrice: number, modifierTypeId: string | null): number {
@@ -353,7 +367,15 @@ export async function deleteDeliverable(id: string): Promise<void> {
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const response = await fetch('/api/catalog/products');
+    // Tentar buscar da API do catálogo primeiro
+    let response = await fetch('/api/catalog/products');
+    
+    // Se não conseguir, tentar a API de vendas
+    if (!response.ok) {
+      console.log('Tentando API de vendas após falha na API do catálogo');
+      response = await fetch('/api/sales/products');
+    }
+    
     if (!response.ok) throw new Error('Falha ao buscar produtos');
     return await response.json();
   } catch (error) {
@@ -455,73 +477,174 @@ export async function deleteProductGuideline(productId: string, guidelineId: str
 
 // Corrigir a função createProduct para garantir compatibilidade de tipos
 export async function createProduct(product: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      logDebug("Creating product with data:", product)
-      const productId = `prod-${products.length + 1}`
-
-      // Ensure prices are properly formatted
-      const formattedPrices = product.prices.map((price) => ({
-        amount: Number(price.amount),
-        currencyId: price.currencyId,
-        modifierTypeId: price.modifierTypeId,
-      }))
-
-      // Process deliverables - handle both existing and new deliverables
-      const productDeliverables = product.deliverables.map((deliverable) => {
-        // Check if this is an existing deliverable (has an id) or a new one
-        const existingDeliverable = deliverables.find((d) => d.id === deliverable.id)
-
-        if (existingDeliverable) {
-          // If it's an existing deliverable, just update the productId
-          return {
-            ...existingDeliverable,
-            productId: productId,
-          }
-        } else {
-          // If it's a new deliverable, create a new one
-          return {
-            id: `del-${deliverables.length + 1}`,
-            name: deliverable.name,
-            description: deliverable.description,
-            productId: productId,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        }
-      })
-
-      // Create the new product with properly formatted data
-      const newProduct: Product = {
-        id: productId,
+  try {
+    logDebug("Creating product with data:", product);
+    
+    // Passo 1: Criar o produto base
+    const response = await fetch('/api/catalog/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         name: product.name,
         description: product.description,
-        productType: product.productType,
-        status: product.status,
+        paymentType: product.productType,
         singleItemOnly: product.singleItemOnly,
         categoryId: product.categoryId,
-        prices: formattedPrices,
-        deliverables: productDeliverables,
-        guidelines: product.guidelines || [],
-        createdBy: product.createdBy || "system",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      // Add the new product to the products array
-      products.push(newProduct)
-
-      // Add any new deliverables to the deliverables array
-      productDeliverables.forEach((deliverable) => {
-        if (!deliverables.some((d) => d.id === deliverable.id)) {
-          deliverables.push(deliverable)
+        createdBy: product.createdBy || "system"
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao criar produto base: ${response.status} ${errorText}`);
+    }
+    
+    let newProduct = await response.json();
+    const productId = newProduct.id;
+    logDebug("Produto base criado:", newProduct);
+    
+    // Passo 2: Adicionar preços
+    if (product.prices && product.prices.length > 0) {
+      for (const price of product.prices) {
+        if (price.amount > 0 && price.currencyId) {
+          try {
+            // Verificar se modifierTypeId é um UUID válido ou null
+            // Se for uma string vazia ou inválida, usar null
+            let validModifierTypeId = null;
+            if (price.modifierTypeId) {
+              // Verificar se é um UUID válido (formato aproximado)
+              const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+              if (uuidRegex.test(price.modifierTypeId)) {
+                validModifierTypeId = price.modifierTypeId;
+              } else {
+                logDebug("modifierTypeId inválido, será enviado como null:", price.modifierTypeId);
+              }
+            }
+            
+            const priceData = {
+              productId: productId,
+              currencyId: price.currencyId,
+              amount: Number(price.amount),
+              modifierTypeId: validModifierTypeId
+            };
+            
+            logDebug("Enviando dados de preço:", priceData);
+            
+            const priceResponse = await fetch('/api/catalog/products/prices', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(priceData),
+            });
+            
+            if (!priceResponse.ok) {
+              const errorText = await priceResponse.text().catch(() => '');
+              throw new Error(`API respondeu com status ${priceResponse.status}: ${errorText}`);
+            }
+            
+            newProduct = await priceResponse.json();
+            logDebug("Preço adicionado:", newProduct);
+          } catch (priceError) {
+            console.error("Erro ao adicionar preço:", priceError);
+            throw new Error(`Falha ao adicionar preço ao produto: ${priceError instanceof Error ? priceError.message : String(priceError)}`);
+          }
+        } else {
+          logDebug("Ignorando preço inválido:", price);
         }
-      })
-
-      logDebug("Created new product:", newProduct)
-      resolve(newProduct)
-    }, 500)
-  })
+      }
+    }
+    
+    // Passo 3: Adicionar entregáveis (deliverables)
+    if (product.deliverables && product.deliverables.length > 0) {
+      for (const deliverable of product.deliverables) {
+        if (deliverable.id) {
+          try {
+            const deliverableResponse = await fetch('/api/catalog/products/deliverables', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                productId: productId,
+                deliverableId: deliverable.id
+              }),
+            });
+            
+            if (!deliverableResponse.ok) {
+              const errorText = await deliverableResponse.text().catch(() => '');
+              console.warn(`Falha ao adicionar entregável: ${deliverableResponse.status} ${errorText}`);
+              continue; // Continuar com o próximo entregável mesmo que este falhe
+            }
+            
+            newProduct = await deliverableResponse.json();
+            logDebug("Entregável adicionado:", newProduct);
+          } catch (deliverableError) {
+            console.warn("Erro ao adicionar entregável:", deliverableError);
+            // Continuar com os próximos entregáveis
+          }
+        }
+      }
+    }
+    
+    // Passo 4: Adicionar guidelines
+    if (product.guidelines && product.guidelines.length > 0) {
+      for (const guideline of product.guidelines) {
+        if (guideline.id) {
+          try {
+            const guidelineResponse = await fetch('/api/catalog/products/guidelines', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                description: guideline.description,
+                name: guideline.name,
+                productId: productId
+              }),
+            });
+            
+            if (!guidelineResponse.ok) {
+              const errorText = await guidelineResponse.text().catch(() => '');
+              console.warn(`Falha ao adicionar guideline: ${guidelineResponse.status} ${errorText}`);
+              continue; // Continuar com a próxima guideline mesmo que esta falhe
+            }
+            
+            newProduct = await guidelineResponse.json();
+            logDebug("Guideline adicionada:", newProduct);
+          } catch (guidelineError) {
+            console.warn("Erro ao adicionar guideline:", guidelineError);
+            // Continuar com as próximas guidelines
+          }
+        }
+      }
+    }
+    
+    // Buscar o produto final atualizado
+    try {
+      const finalProductResponse = await fetch(`/api/catalog/products/find/${productId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (finalProductResponse.ok) {
+        newProduct = await finalProductResponse.json();
+      }
+    } catch (error) {
+      // Ignorar erro ao buscar produto final, usar o que já temos
+      console.warn("Erro ao buscar produto final:", error);
+    }
+    
+    logDebug("Produto completo criado:", newProduct);
+    return newProduct;
+  } catch (error) {
+    console.error("Erro ao criar produto:", error);
+    throw error;
+  }
 }
 
 export async function updateCoupon(id: string, coupon: Partial<Coupon>): Promise<Coupon> {
@@ -660,195 +783,395 @@ export async function deleteModifierType(key: string): Promise<void> {
   })
 }
 
+// Tipo unificado de Offer
 export type Offer = {
   id: string
   leadId: string
-  leadName: string
-  status: "OPEN" | "CONVERTED"
-  type: "ONE_TIME" | "RECURRENT"
+  leadName?: string
+  status?: "PENDING" | "CONVERTED" | "EXPIRED" | "CANCELLED"
+  type?: "ONE_TIME" | "RECURRENT"
   subtotal: number
   total: number
   items: OfferItem[]
+  couponId?: string
+  couponDiscountPercentage?: number
+  couponDiscountTotal?: number
+  installmentId?: string
+  installmentMonths?: number
+  installmentDiscountPercentage?: number
+  installmentDiscountTotal?: number
+  offerDurationId?: string
+  offerDurationMonths?: number
+  offerDurationDiscountPercentage?: number
+  offerDurationDiscountTotal?: number
+  projectStartDate?: string
+  paymentStartDate?: string
+  payDay?: number
   createdAt: string
   updatedAt: string
 }
 
+// Tipo unificado de OfferItem
 export type OfferItem = {
   id: string
-  offerId: string
+  offerId?: string
   productId: string
-  productPriceId: string
+  priceId?: string
+  productType?: string
+  price: number
   quantity: number
-  unitPrice: number
-  lineTotal: number
+  totalPrice: number
 }
 
 export async function getOffers(): Promise<Offer[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...offers])
-    }, 500)
-  })
+  try {
+    logDebug("Buscando ofertas da API")
+    
+    // Acessar a API local que já tem dados mockados
+    const response = await fetch("/api/sales/offers")
+    if (!response.ok) {
+      throw new Error(`Erro ao buscar ofertas: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    // Transformar para o formato usado pelo cliente
+    return data.map((offer: any) => ({
+      id: offer.id,
+      leadId: offer.leadId,
+      leadName: offer.leadName || "Cliente",
+      status: offer.status,
+      type: offer.type,
+      subtotal: offer.subtotalPrice,
+      total: offer.totalPrice,
+      items: offer.offerItems.map((item: any) => ({
+        id: item.id,
+        offerId: item.offerId,
+        productId: item.productId,
+        priceId: item.priceId,
+        productType: item.productType,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice
+      })),
+      couponId: offer.couponId,
+      couponDiscountPercentage: offer.couponDiscountPercentage,
+      couponDiscountTotal: offer.couponDiscountTotal,
+      installmentId: offer.installmentId,
+      installmentMonths: offer.installmentMonths,
+      installmentDiscountPercentage: offer.installmentDiscountPercentage,
+      installmentDiscountTotal: offer.installmentDiscountTotal,
+      offerDurationId: offer.offerDurationId,
+      offerDurationMonths: offer.offerDurationMonths,
+      offerDurationDiscountPercentage: offer.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offer.offerDurationDiscountTotal,
+      projectStartDate: offer.projectStartDate,
+      paymentStartDate: offer.paymentStartDate,
+      payDay: offer.payDay,
+      createdAt: offer.createdAt,
+      updatedAt: offer.updatedAt
+    }))
+  } catch (error) {
+    logDebug("Erro ao buscar ofertas:", error)
+    return offers // dados mockados em memória como fallback
+  }
 }
 
 export async function getProductOffers(productId: string): Promise<Offer[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const productOffers = offers.filter(offer => 
-        offer.items.some(item => item.productId === productId)
-      )
-      resolve([...productOffers])
-    }, 500)
-  })
+  try {
+    const allOffers = await getOffers()
+    return allOffers.filter((offer) => 
+      offer.items.some((item) => item.productId === productId)
+    )
+  } catch (error) {
+    logDebug(`Erro ao buscar ofertas para o produto ${productId}:`, error)
+    return []
+  }
 }
 
 export async function getOfferById(id: string): Promise<Offer> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const offer = offers.find((offer) => offer.id === id)
-      if (offer) {
-        resolve({ ...offer })
-      } else {
-        reject(new Error(`Offer with id ${id} not found`))
-      }
-    }, 500)
-  })
+  try {
+    logDebug(`Buscando oferta ${id}`)
+    
+    // Acessar a API local
+    const response = await fetch(`/api/sales/offers/${id}`)
+    if (!response.ok) {
+      throw new Error(`Erro ao buscar oferta: ${response.status}`)
+    }
+    
+    const offer = await response.json()
+    
+    // Transformar para o formato usado pelo cliente
+    return {
+      id: offer.id,
+      leadId: offer.leadId,
+      leadName: offer.leadName || "Cliente",
+      status: offer.status,
+      type: offer.type,
+      subtotal: offer.subtotalPrice,
+      total: offer.totalPrice,
+      items: offer.offerItems.map((item: any) => ({
+        id: item.id,
+        offerId: item.offerId,
+        productId: item.productId,
+        priceId: item.priceId,
+        productType: item.productType,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice
+      })),
+      couponId: offer.couponId,
+      couponDiscountPercentage: offer.couponDiscountPercentage,
+      couponDiscountTotal: offer.couponDiscountTotal,
+      installmentId: offer.installmentId,
+      installmentMonths: offer.installmentMonths,
+      installmentDiscountPercentage: offer.installmentDiscountPercentage,
+      installmentDiscountTotal: offer.installmentDiscountTotal,
+      offerDurationId: offer.offerDurationId,
+      offerDurationMonths: offer.offerDurationMonths,
+      offerDurationDiscountPercentage: offer.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offer.offerDurationDiscountTotal,
+      projectStartDate: offer.projectStartDate,
+      paymentStartDate: offer.paymentStartDate,
+      payDay: offer.payDay,
+      createdAt: offer.createdAt,
+      updatedAt: offer.updatedAt
+    }
+  } catch (error) {
+    logDebug(`Erro ao buscar oferta ${id}:`, error)
+    
+    // Buscar na lista em memória como fallback
+    const offer = offers.find((o) => o.id === id)
+    if (!offer) {
+      throw new Error(`Oferta ${id} não encontrada`)
+    }
+    return offer
+  }
 }
 
+// Função para verificar se um produto foi adicionado à oferta
+export async function verifyProductInOffer(offerId: string, productId?: string): Promise<{
+  exists: boolean;
+  message: string;
+  offerDetails?: any;
+  items?: any[];
+  isDuplicated?: boolean;
+  duplicateCount?: number;
+}> {
+  logDebug(`Verificando se produto ${productId || 'qualquer'} existe na oferta ${offerId}`);
+  
+  try {
+    // Primeiro, tentar obter os dados diretamente da API de ofertas
+    const response = await fetch(`/api/sales/offers/${offerId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      }
+    });
+    
+    if (response.ok) {
+      const offerData = await response.json();
+      logDebug(`Obtidos dados diretos da oferta ${offerId}`, offerData);
+      
+      // Se a oferta não tem itens ou offerItems não é um array
+      if (!offerData.offerItems || !Array.isArray(offerData.offerItems) || offerData.offerItems.length === 0) {
+        return {
+          exists: false,
+          message: 'A oferta não possui nenhum item',
+          offerDetails: {
+            id: offerData.id,
+            status: offerData.status,
+            type: offerData.type,
+            subtotalPrice: offerData.subtotalPrice || 0,
+            totalPrice: offerData.totalPrice || 0,
+            itemCount: 0
+          }
+        };
+      }
+      
+      // Se estamos verificando um produto específico
+      if (productId) {
+        const matchingItems = offerData.offerItems.filter((item: any) => 
+          item.productId === productId
+        );
+        
+        const exists = matchingItems.length > 0;
+        const isDuplicated = matchingItems.length > 1;
+        
+        return {
+          exists,
+          isDuplicated,
+          duplicateCount: matchingItems.length,
+          message: exists 
+            ? `Produto ${productId} encontrado na oferta ${offerId}`
+            : `Produto ${productId} não encontrado na oferta ${offerId}`,
+          offerDetails: {
+            id: offerData.id,
+            status: offerData.status,
+            type: offerData.type,
+            subtotalPrice: offerData.subtotalPrice || 0,
+            totalPrice: offerData.totalPrice || 0,
+            itemCount: offerData.offerItems.length
+          },
+          items: matchingItems
+        };
+      }
+      
+      // Retornar informações sobre todos os itens
+      return {
+        exists: true,
+        message: `Oferta ${offerId} possui ${offerData.offerItems.length} item(s)`,
+        offerDetails: {
+          id: offerData.id,
+          status: offerData.status,
+          type: offerData.type,
+          subtotalPrice: offerData.subtotalPrice || 0,
+          totalPrice: offerData.totalPrice || 0,
+          itemCount: offerData.offerItems.length
+        },
+        items: offerData.offerItems
+      };
+    }
+    
+    // Se não conseguir acessar diretamente, usar o endpoint de verificação
+    const verifyResponse = await fetch("/api/sales/offers/verify-item", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        offerId,
+        productId
+      }),
+    });
+    
+    if (!verifyResponse.ok) {
+      const errorText = await verifyResponse.text().catch(() => '');
+      throw new Error(`Erro ao verificar produto na oferta: ${verifyResponse.status} - ${errorText}`);
+    }
+    
+    // Retornar os dados da verificação
+    const result = await verifyResponse.json();
+    logDebug(`Resultado da verificação:`, result);
+    
+    return result;
+  } catch (error) {
+    logDebug(`Erro ao verificar produto na oferta:`, error);
+    return {
+      exists: false,
+      message: `Erro ao verificar: ${error instanceof Error ? error.message : String(error)}`
+    };
+  }
+}
+
+// Função unificada para adicionar produto a uma oferta
 export async function addProductToOffer(
   offerId: string,
   productId: string,
   priceId: string,
   quantity: number
 ): Promise<Offer> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const offerIndex = offers.findIndex((o) => o.id === offerId)
-      if (offerIndex === -1) {
-        reject(new Error(`Offer with id ${offerId} not found`))
-        return
+  logDebug(`Adicionando produto ${productId} à oferta ${offerId}`);
+  
+  try {
+    // Verificar se o produto já existe na oferta
+    const verificationResult = await verifyProductInOffer(offerId, productId);
+    
+    // Se o produto já existir, apenas retornar a oferta atual
+    if (verificationResult.exists) {
+      logDebug(`Produto ${productId} já existe na oferta ${offerId}. Ignorando duplicação.`);
+      
+      // Verificar se o item está duplicado e alertar
+      if (verificationResult.isDuplicated) {
+        console.warn(`ALERTA: Produto ${productId} está duplicado ${verificationResult.duplicateCount} vezes na oferta ${offerId}`);
       }
-
-      const product = products.find((p) => p.id === productId)
-      if (!product) {
-        reject(new Error(`Product with id ${productId} not found`))
-        return
-      }
-
-      const price = product.prices.find((p) => p.currencyId === priceId)
-      if (!price) {
-        reject(new Error(`Price with id ${priceId} not found for product ${productId}`))
-        return
-      }
-
-      const newItem: OfferItem = {
-        id: `item-${offerItems.length + 1}`,
+      
+      // Buscar oferta completa
+      return await getOfferById(offerId);
+    }
+    
+    // Usar a rota documentada em doc.txt
+    const response = await fetch("/api/sales/offers/items", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         offerId,
         productId,
-        productPriceId: priceId,
-        quantity,
-        unitPrice: price.amount,
-        lineTotal: price.amount * quantity
+        priceId,
+        quantity: Number(quantity) || 1
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Erro ao adicionar produto: ${response.status} - ${errorText}`);
+    }
+    
+    logDebug(`Produto adicionado com sucesso à API`);
+    
+    // Obter a resposta completa da API
+    const apiResponse = await response.json();
+    logDebug("Resposta completa da API após adicionar item:", apiResponse);
+    
+    // Verificar a estrutura da resposta
+    if (!apiResponse || !apiResponse.id) {
+      throw new Error("Resposta da API inválida ao adicionar produto");
+    }
+    
+    // Buscar a oferta atualizada diretamente para garantir que temos os dados mais recentes
+    const updatedOffer = await getOfferById(offerId);
+    
+    // Verificar se o produto está na oferta retornada
+    const productAdded = updatedOffer.items.some(item => item.productId === productId);
+    
+    if (!productAdded) {
+      logDebug(`Produto ${productId} não encontrado na oferta atualizada. Realizando verificação adicional...`);
+      
+      // Esperar um momento para garantir que a API processou a adição
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Verificar novamente
+      const finalCheck = await getOfferById(offerId);
+      const finalCheckProductExists = finalCheck.items.some(item => item.productId === productId);
+      
+      if (finalCheckProductExists) {
+        logDebug(`Produto ${productId} encontrado na verificação final`);
+        return finalCheck;
       }
-
-      offerItems.push(newItem)
-      offers[offerIndex].items.push(newItem)
-
-      // Recalcular totais
-      const subtotal = offers[offerIndex].items.reduce((acc, item) => acc + item.lineTotal, 0)
-      offers[offerIndex].subtotal = subtotal
-      offers[offerIndex].total = subtotal // Por enquanto sem desconto
-
-      resolve({ ...offers[offerIndex] })
-    }, 500)
-  })
-}
-
-export async function removeProductFromOffer(offerId: string, itemId: string): Promise<Offer> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const offerIndex = offers.findIndex((o) => o.id === offerId)
-      if (offerIndex === -1) {
-        reject(new Error(`Offer with id ${offerId} not found`))
-        return
+      
+      // Se ainda não encontrou, tentar adicionar novamente
+      logDebug(`Produto ${productId} não encontrado, tentando adicionar novamente...`);
+      
+      const retryResponse = await fetch("/api/sales/offers/items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          offerId,
+          productId,
+          priceId,
+          quantity: Number(quantity) || 1
+        }),
+      });
+      
+      if (!retryResponse.ok) {
+        const errorText = await retryResponse.text().catch(() => '');
+        throw new Error(`Erro na segunda tentativa: ${retryResponse.status} - ${errorText}`);
       }
-
-      const itemIndex = offers[offerIndex].items.findIndex((i) => i.id === itemId)
-      if (itemIndex === -1) {
-        reject(new Error(`Item with id ${itemId} not found in offer ${offerId}`))
-        return
-      }
-
-      // Remover item
-      offers[offerIndex].items.splice(itemIndex, 1)
-
-      // Recalcular totais
-      const subtotal = offers[offerIndex].items.reduce((acc, item) => acc + item.lineTotal, 0)
-      offers[offerIndex].subtotal = subtotal
-      offers[offerIndex].total = subtotal // Por enquanto sem desconto
-
-      resolve({ ...offers[offerIndex] })
-    }, 500)
-  })
-}
-
-export async function createOffer(offer: {
-  leadId: string
-  leadName: string
-  type: "ONE_TIME" | "RECURRENT"
-  items?: {
-    productId: string
-    productPriceId: string
-    quantity: number
-  }[]
-}): Promise<Offer> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const newOffer: Offer = {
-        id: `offer-${offers.length + 1}`,
-        leadId: offer.leadId,
-        leadName: offer.leadName,
-        status: "OPEN",
-        type: offer.type,
-        subtotal: 0,
-        total: 0,
-        items: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      // Se houver itens, adiciona-os à oferta
-      if (offer.items && offer.items.length > 0) {
-        for (const item of offer.items) {
-          const product = products.find(p => p.id === item.productId)
-          if (!product) continue
-
-          const price = product.prices.find(p => p.currencyId === item.productPriceId)
-          if (!price) continue
-
-          const newItem: OfferItem = {
-            id: `item-${offerItems.length + 1}`,
-            offerId: newOffer.id,
-            productId: item.productId,
-            productPriceId: item.productPriceId,
-            quantity: item.quantity,
-            unitPrice: price.amount,
-            lineTotal: price.amount * item.quantity
-          }
-
-          offerItems.push(newItem)
-          newOffer.items.push(newItem)
-        }
-
-        // Calcula os totais
-        newOffer.subtotal = newOffer.items.reduce((acc, item) => acc + item.lineTotal, 0)
-        newOffer.total = newOffer.subtotal // Por enquanto sem desconto
-      }
-
-      offers.push(newOffer)
-      resolve({ ...newOffer })
-    }, 500)
-  })
+      
+      // Buscar a oferta atualizada após a segunda tentativa
+      const afterRetryOffer = await getOfferById(offerId);
+      return afterRetryOffer;
+    }
+    
+    return updatedOffer;
+  } catch (error) {
+    logDebug(`Erro ao adicionar produto à oferta:`, error);
+    throw error;
+  }
 }
 
 export async function createCategory(category: Omit<Category, "id">): Promise<Category> {
@@ -880,4 +1203,354 @@ export async function createDeliverable(deliverable: Omit<Deliverable, "id" | "p
   })
 }
 
-export type { Product, Category, Currency, Deliverable, Guideline, ModifierType, Coupon }
+// Funções adicionais para API de Payment Methods
+export async function getPaymentMethodById(id: string): Promise<PaymentMethod> {
+  try {
+    const response = await fetch(`/api/sales/payment-methods/${id}`);
+    if (!response.ok) throw new Error('Falha ao buscar método de pagamento');
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao buscar método de pagamento ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function createNewPaymentMethod(data: {
+  name: string;
+  description: string;
+  code: string;
+}): Promise<PaymentMethod> {
+  try {
+    const response = await fetch('/api/sales/payment-methods', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao criar método de pagamento: ${response.status} ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao criar método de pagamento:', error);
+    throw error;
+  }
+}
+
+export async function updatePaymentMethod(id: string, data: {
+  name?: string;
+  description?: string;
+  code?: string;
+}): Promise<PaymentMethod> {
+  try {
+    const response = await fetch(`/api/sales/payment-methods/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id, ...data }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao atualizar método de pagamento: ${response.status} ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao atualizar método de pagamento ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function deletePaymentMethod(id: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/sales/payment-methods/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao excluir método de pagamento: ${response.status} ${errorText}`);
+    }
+  } catch (error) {
+    console.error(`Erro ao excluir método de pagamento ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function getPaymentMethods(): Promise<PaymentMethod[]> {
+  try {
+    // Tentar obter dados reais
+    const methods = await getAllPaymentMethods();
+    
+    // Se retornou array vazio, fornecer dados padrão para ambientes de desenvolvimento
+    if (Array.isArray(methods) && methods.length === 0) {
+      console.log("Nenhum método de pagamento encontrado, usando dados padrão");
+      return [
+        {
+          id: "method-dev-1",
+          name: "Cartão de Crédito",
+          description: "Pagamento via cartão de crédito (Visa, Mastercard, etc)",
+          code: "CREDIT_CARD",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: "method-dev-2",
+          name: "Pix",
+          description: "Pagamento instantâneo via Pix",
+          code: "PIX",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+    }
+    
+    // Retornar os dados reais
+    return methods;
+  } catch (error) {
+    console.error("Erro ao obter métodos de pagamento:", error);
+    // Em caso de erro, retornar array vazio
+    return [];
+  }
+}
+
+export async function getAllPaymentMethods(): Promise<PaymentMethod[]> {
+  try {
+    const response = await fetch('/api/sales/payment-methods');
+    if (!response.ok) throw new Error('Falha ao buscar métodos de pagamento');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar métodos de pagamento:', error);
+    return [];
+  }
+}
+
+// Funções para gerenciar parcelas (installments)
+export async function getInstallments(): Promise<Installment[]> {
+  try {
+    const response = await fetch('/api/sales/installments');
+    if (!response.ok) throw new Error('Falha ao buscar parcelas');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar parcelas:', error);
+    return [];
+  }
+}
+
+export async function getInstallmentById(id: string): Promise<Installment> {
+  try {
+    const response = await fetch(`/api/sales/installments/${id}`);
+    if (!response.ok) throw new Error('Falha ao buscar parcela');
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao buscar parcela ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function createInstallment(data: {
+  installment: number;
+  discountPercentage: number;
+  paymentMethodId: string;
+}): Promise<Installment> {
+  try {
+    const response = await fetch('/api/sales/installments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao criar parcela: ${response.status} ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao criar parcela:', error);
+    throw error;
+  }
+}
+
+export async function updateInstallment(id: string, data: {
+  installment?: number;
+  discountPercentage?: number;
+  paymentMethodId?: string;
+}): Promise<Installment> {
+  try {
+    const response = await fetch(`/api/sales/installments/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao atualizar parcela: ${response.status} ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao atualizar parcela ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function deleteInstallment(id: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/sales/installments/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao excluir parcela: ${response.status} ${errorText}`);
+    }
+  } catch (error) {
+    console.error(`Erro ao excluir parcela ${id}:`, error);
+    throw error;
+  }
+}
+
+// Funções para gerenciar durações de ofertas
+export type OfferDuration = {
+  id: string;
+  months: number;
+  discountPercentage: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function getOfferDurations(): Promise<OfferDuration[]> {
+  try {
+    const response = await fetch('/api/sales/offer-durations');
+    if (!response.ok) throw new Error('Falha ao buscar durações de ofertas');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar durações de ofertas:', error);
+    return [];
+  }
+}
+
+export async function getOfferDurationById(id: string): Promise<OfferDuration> {
+  try {
+    const response = await fetch(`/api/sales/offer-durations/${id}`);
+    if (!response.ok) throw new Error('Falha ao buscar duração de oferta');
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao buscar duração de oferta ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function createOfferDuration(data: {
+  months: number;
+  discountPercentage: number;
+}): Promise<OfferDuration> {
+  try {
+    const response = await fetch('/api/sales/offer-durations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao criar duração de oferta: ${response.status} ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao criar duração de oferta:', error);
+    throw error;
+  }
+}
+
+// Tipos para gerenciamento de ofertas
+export type ProductPrice = {
+  currencyId: string;
+  amount: number;
+};
+
+export type ProductDetail = {
+  id: string;
+  name: string;
+  description: string;
+  paymentType: "ONE_TIME" | "RECURRENT";
+  prices: ProductPrice[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Offer = {
+  id: string;
+  items: OfferItem[];
+  leadId: string;
+  subtotal: number;
+  total: number;
+  installmentId?: string;
+  offerDurationId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Session = {
+  id: string;
+  leadId: string;
+  oneTimeOfferId: string;
+  recurrentOfferId: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Função para criar uma sessão
+export async function createSession(data: { name: string; salesforceLeadId: string }): Promise<Session> {
+  try {
+    const response = await fetch('/api/sales/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao criar sessão: ${response.status} ${errorText}`);
+    }
+    
+    // Garantir que a resposta segue o formato da documentação
+    const sessionData = await response.json();
+    
+    // Formato da resposta conforme a documentação
+    const formattedResponse: Session = {
+      id: sessionData.id,
+      leadId: sessionData.leadId,
+      oneTimeOfferId: sessionData.oneTimeOfferId,
+      recurrentOfferId: sessionData.recurrentOfferId,
+      expiresAt: sessionData.expiresAt,
+      createdAt: sessionData.createdAt,
+      updatedAt: sessionData.updatedAt
+    };
+    
+    return formattedResponse;
+  } catch (error) {
+    console.error('Erro ao criar sessão:', error);
+    throw error;
+  }
+}
+
+export type { Category, Currency, Deliverable, Guideline, ModifierType, Coupon, PaymentMethod }

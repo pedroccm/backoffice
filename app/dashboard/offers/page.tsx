@@ -7,13 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Search, Eye } from "lucide-react"
+import { Search, Eye, XCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { type Offer } from "@/lib/api-fetch"
 import { getAllOffers, formatCurrency } from "@/lib/offers-service"
-import { getAllSessionOffers, type SessionOffer } from "@/lib/session-offers-service"
+import { getAllSessionOffers, closeSessionOffer, type SessionOffer } from "@/lib/session-offers-service"
 
 // Interface estendida para incluir leadName nas ofertas
 interface OfferWithLeadName extends Offer {
@@ -26,6 +35,9 @@ export default function OffersPage() {
   const [loading, setLoading] = useState(true)
   const [loadingSessionOffers, setLoadingSessionOffers] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [closingSessionId, setClosingSessionId] = useState<string | null>(null)
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false)
+  const [isClosingOffer, setIsClosingOffer] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -79,6 +91,51 @@ export default function OffersPage() {
       offer.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       offer.leadId.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  const handleCloseOffer = async (sessionId: string) => {
+    try {
+      setIsClosingOffer(true);
+      const success = await closeSessionOffer(sessionId);
+      
+      if (success) {
+        // Atualizar a lista de ofertas
+        const updatedSessionOffers = sessionOffers.map((offer) => {
+          if (offer.sessionId === sessionId) {
+            return { ...offer, status: "CLOSED" };
+          }
+          return offer;
+        });
+        setSessionOffers(updatedSessionOffers);
+        
+        toast({
+          title: "Sucesso",
+          description: "Oferta fechada com sucesso.",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível fechar a oferta.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao fechar oferta:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao fechar a oferta.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClosingOffer(false);
+      setIsConfirmDialogOpen(false);
+      setClosingSessionId(null);
+    }
+  };
+
+  const openConfirmDialog = (sessionId: string) => {
+    setClosingSessionId(sessionId);
+    setIsConfirmDialogOpen(true);
+  };
 
   return (
     <div className="grid gap-6">
@@ -149,22 +206,39 @@ export default function OffersPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge variant={offer.status === "CONVERTED" ? "default" : "secondary"}>
-                                  {offer.status === "CONVERTED" ? "Convertido" : "Em Aberto"}
+                                <Badge variant={offer.status === "CONVERTED" ? "default" : offer.status === "CLOSED" ? "destructive" : "secondary"}>
+                                  {offer.status === "CONVERTED" 
+                                    ? "Convertido" 
+                                    : offer.status === "CLOSED"
+                                    ? "Fechado"
+                                    : "Em Aberto"}
                                 </Badge>
                               </TableCell>
                               <TableCell>{formatCurrency(offer.subtotalPrice)}</TableCell>
                               <TableCell>{formatCurrency(offer.totalPrice)}</TableCell>
                               <TableCell>{new Date(offer.createdAt).toLocaleString()}</TableCell>
                               <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => router.push(`/dashboard/offers/${offer.id}`)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  <span className="sr-only">Ver Detalhes</span>
-                                </Button>
+                                <div className="flex justify-end items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => router.push(`/dashboard/offers/${offer.id}`)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">Ver Detalhes</span>
+                                  </Button>
+                                  
+                                  {offer.status !== "CLOSED" && offer.status !== "CONVERTED" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openConfirmDialog(offer.sessionId)}
+                                    >
+                                      <XCircle className="h-4 w-4 text-destructive" />
+                                      <span className="sr-only">Fechar Oferta</span>
+                                    </Button>
+                                  )}
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))
@@ -247,6 +321,41 @@ export default function OffersPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog de confirmação */}
+      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar fechamento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja fechar esta oferta? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsConfirmDialogOpen(false)}
+              disabled={isClosingOffer}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => closingSessionId && handleCloseOffer(closingSessionId)}
+              disabled={isClosingOffer}
+            >
+              {isClosingOffer ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Fechando...
+                </>
+              ) : (
+                "Fechar oferta"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

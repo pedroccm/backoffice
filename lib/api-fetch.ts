@@ -6,44 +6,131 @@ export const CATALOG_API_URL = "https://api.catalog.dev.mktlab.app";
 export async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
   // Verificar se a URL é relativa (API local) ou absoluta (API externa)
   const isLocalApi = url.startsWith('/api/');
+  const isExternalSalesApi = url.includes(SALES_API_URL);
+  const isExternalCatalogApi = url.includes(CATALOG_API_URL);
   
   // Log para debug
   console.debug(`Iniciando requisição para: ${url} (${isLocalApi ? 'API local' : 'API externa'})`);
   
   try {
+    // Adiciona timeout para evitar requisições penduradas
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos
+    
     const response = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options?.headers || {}),
       },
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     // Log para debug sobre a resposta
     console.debug(`Resposta de ${url}: status ${response.status}`);
 
     if (!response.ok) {
       // Tenta extrair mensagem de erro da resposta
+      let errorDetails = '';
+      
       try {
-        const errorData = await response.json();
-        console.error(`Erro na resposta de ${url}:`, errorData);
-        throw new Error(
-          `Erro na requisição: ${response.status} - ${response.statusText} - ${
-            errorData.message || JSON.stringify(errorData)
-          }`
-        );
+        const errorText = await response.text();
+        
+        // Verificar se há conteúdo na resposta
+        if (errorText.trim()) {
+          try {
+            // Tentar converter para JSON
+            const errorData = JSON.parse(errorText);
+            errorDetails = JSON.stringify(errorData);
+            console.error(`Erro na resposta de ${url}:`, errorData);
+          } catch (jsonError) {
+            // Se não for JSON válido, usar o texto bruto
+            errorDetails = errorText;
+            console.error(`Erro na resposta de ${url} (texto não-JSON):`, errorText);
+          }
+        } else {
+          errorDetails = '[Resposta vazia]';
+          console.error(`Erro na resposta de ${url}: Resposta vazia`);
+        }
       } catch (e) {
+        errorDetails = '[Erro ao ler resposta]';
         console.error(`Não foi possível extrair detalhes do erro de ${url}:`, e);
-        throw new Error(`Erro na requisição: ${response.status} - ${response.statusText}`);
       }
+      
+      throw new Error(
+        `Erro na requisição: ${response.status} - ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`
+      );
     }
 
-    const data = await response.json();
+    // Para respostas vazias sem conteúdo
+    if (response.status === 204) {
+      console.debug(`Resposta sem conteúdo de ${url}`);
+      return {} as T;
+    }
+
+    // Verifica o tipo de conteúdo
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.warn(`Resposta não-JSON de ${url}: ${contentType}`);
+      // Para APIs que não retornam JSON
+      const text = await response.text();
+      
+      // Tentar converter para JSON mesmo assim (algumas APIs retornam JSON sem o Content-Type correto)
+      try {
+        if (text.trim()) {
+          const data = JSON.parse(text);
+          console.debug(`Dados recebidos de ${url} (convertidos de texto): ${Array.isArray(data) ? `Array com ${data.length} itens` : 'Objeto'}`);
+          return data as T;
+        }
+      } catch (e) {
+        console.debug(`Não foi possível converter resposta de texto para JSON: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
+      }
+      
+      // Se chegou aqui, retornar um objeto vazio ou array conforme o tipo esperado
+      console.warn(`Retornando dados vazios para resposta não-JSON de ${url}`);
+      return (Array.isArray({} as T) ? [] : {}) as T;
+    }
+
+    let data;
+    try {
+      const text = await response.text();
+      
+      // Verificar se há conteúdo na resposta
+      if (!text.trim()) {
+        console.warn(`Resposta JSON vazia de ${url}`);
+        return (Array.isArray({} as T) ? [] : {}) as T;
+      }
+      
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error(`Erro ao parsear JSON de ${url}:`, e);
+      throw new Error(`Erro ao processar resposta da API: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    
     // Log para debug sobre o resultado
     console.debug(`Dados recebidos de ${url}: ${Array.isArray(data) ? `Array com ${data.length} itens` : 'Objeto'}`);
     
     return data as T;
   } catch (error) {
+    // Tratamento específico para erros de timeout
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.error(`Timeout na requisição para ${url}`);
+      
+      if (isExternalSalesApi || isExternalCatalogApi) {
+        console.warn(`Redirecionando para API local equivalente após timeout em API externa ${url}`);
+        
+        // Redirecionar para a API local equivalente
+        const localUrl = url
+          .replace(SALES_API_URL, '/api/sales')
+          .replace(CATALOG_API_URL, '/api/catalog');
+        
+        console.debug(`Tentando API local: ${localUrl}`);
+        return apiRequest<T>(localUrl, options);
+      }
+    }
+    
     // Para APIs locais, podemos tratar o erro de forma diferente para não quebrar a interface
     if (isLocalApi) {
       console.error(`Erro ao acessar API local ${url}:`, error);
@@ -62,6 +149,26 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
       console.warn(`Retornando objeto vazio como fallback para ${url}`);
       return {} as T;
     }
+    
+    // Se a API externa falhar e não for API local, tenta redirecionar para a API local
+    if (isExternalSalesApi || isExternalCatalogApi) {
+      console.warn(`API externa falhou: ${url}. Erro: ${error instanceof Error ? error.message : String(error)}`);
+      console.warn(`Tentando redirecionar para API local`);
+      
+      try {
+        // Redirecionar para a API local equivalente
+        const localUrl = url
+          .replace(SALES_API_URL, '/api/sales')
+          .replace(CATALOG_API_URL, '/api/catalog');
+        
+        console.debug(`Tentando API local: ${localUrl}`);
+        return apiRequest<T>(localUrl, options);
+      } catch (localError) {
+        console.error(`Também falhou ao acessar API local ${url}:`, localError);
+        throw error; // Repassar o erro original se a API local também falhar
+      }
+    }
+    
     throw error;
   }
 }

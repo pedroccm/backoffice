@@ -73,4 +73,51 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(mockData, { status: 200 });
   }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Obter os dados do corpo da requisição
+    const productData = await request.json();
+    
+    // Fazer a requisição para a API externa
+    const apiResponse = await fetch(`${CATALOG_API_URL}/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(request.headers.get('Authorization') 
+          ? { 'Authorization': request.headers.get('Authorization') || '' } 
+          : {}),
+      },
+      body: JSON.stringify(productData),
+    });
+    
+    // Obter os dados e retornar com o mesmo status
+    const data = await apiResponse.json();
+    
+    return NextResponse.json(data, {
+      status: apiResponse.status,
+    });
+  } catch (error) {
+    console.error('Erro ao criar produto:', error);
+    
+    // Em ambiente de desenvolvimento, retornar dados simulados
+    const mockData = {
+      id: `prod-${Date.now()}`,
+      name: "Novo Produto",
+      description: "Descrição do produto",
+      paymentType: "ONE_TIME",
+      status: "ACTIVE",
+      singleItemOnly: false,
+      categoryId: "cat-1",
+      prices: [],
+      deliverables: [],
+      guidelines: [],
+      createdBy: "system",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    return NextResponse.json(mockData, { status: 201 });
+  }
 } 

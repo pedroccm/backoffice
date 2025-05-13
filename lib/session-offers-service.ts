@@ -1,4 +1,4 @@
-import { getSessionById, getSessionByLeadId, createSession, getLeadById, getOfferById } from "./sales-api";
+import { getSessionById, getSessionByLeadId, createSession, getLeadById, getOfferById, closeSession } from "./sales-api";
 import type { Session, Lead, Offer } from "./sales-api";
 
 const API_BASE_URL = "/api/sessions";
@@ -185,5 +185,28 @@ export async function getAllSessionOffers(): Promise<SessionOffer[]> {
   } catch (error) {
     console.error("Erro ao buscar ofertas de sessões:", error);
     return [];
+  }
+}
+
+// Função para fechar uma sessão e sua oferta
+export async function closeSessionOffer(sessionId: string): Promise<boolean> {
+  try {
+    console.log(`Fechando sessão ${sessionId}`);
+    // Chama o endpoint para fechar a sessão
+    await closeSession(sessionId);
+    
+    // Atualiza localmente se necessário
+    const sessions = await getSessions();
+    const sessionIndex = sessions.findIndex(s => s.id === sessionId);
+    
+    if (sessionIndex !== -1) {
+      sessions[sessionIndex].status = "CLOSED";
+      await updateSessions(sessions);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Erro ao fechar sessão ${sessionId}:`, error);
+    return false;
   }
 }

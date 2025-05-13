@@ -9,6 +9,7 @@ export interface Session {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+  status?: string;
 }
 
 export interface Lead {
@@ -118,15 +119,48 @@ export async function getSessionById(sessionId: string): Promise<Session> {
   return apiRequest<Session>(`${SALES_API_URL}/sessions/${sessionId}`);
 }
 
+// Função para fechar uma sessão
+export async function closeSession(sessionId: string): Promise<Session> {
+  return apiRequest<Session>(`${SALES_API_URL}/sessions/${sessionId}/close`, {
+    method: "PUT",
+  });
+}
+
 // Offers
+export async function getAllOffers(): Promise<Offer[]> {
+  const maxRetries = 2;
+  let lastError = null;
+  
+  try {
+    console.log("Buscando ofertas diretamente da API local...");
+    const localOffers = await apiRequest<Offer[]>("/api/sales/offers");
+    
+    // Verificar se retornou dados válidos
+    if (Array.isArray(localOffers) && localOffers.length > 0) {
+      console.log(`API local retornou ${localOffers.length} ofertas com sucesso`);
+      return localOffers;
+    } else {
+      console.warn("API local retornou um array vazio ou inválido");
+      throw new Error("Dados inválidos da API local");
+    }
+  } catch (error) {
+    console.error("Erro ao acessar ofertas:", error);
+    
+    // Se a API falhar, retornamos array vazio para não quebrar a UI
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Retornando array vazio como fallback em ambiente de desenvolvimento");
+      return [];
+    } else {
+      throw error;
+    }
+  }
+}
+
 export async function getOfferById(offerId: string): Promise<Offer> {
   return apiRequest<Offer>(`${SALES_API_URL}/offers/${offerId}`);
 }
 
-export async function getAllOffers(): Promise<Offer[]> {
-  return apiRequest<Offer[]>(`${SALES_API_URL}/offers`);
-}
-
+// Adicionar item a uma oferta
 export async function addItemToOffer(data: {
   offerId: string;
   productId: string;
@@ -139,12 +173,14 @@ export async function addItemToOffer(data: {
   });
 }
 
+// Remover item de uma oferta
 export async function removeItemFromOffer(offerId: string, offerItemId: string): Promise<Offer> {
   return apiRequest<Offer>(`${SALES_API_URL}/offers/${offerId}/items/${offerItemId}`, {
     method: "DELETE",
   });
 }
 
+// Atualizar uma oferta
 export async function updateOffer(data: {
   offerId: string;
   projectStartDate?: string;
@@ -157,6 +193,7 @@ export async function updateOffer(data: {
   });
 }
 
+// Aplicar duração a uma oferta
 export async function applyOfferDuration(data: {
   offerId: string;
   offerDurationId: string;
@@ -167,6 +204,7 @@ export async function applyOfferDuration(data: {
   });
 }
 
+// Aplicar cupom a uma oferta
 export async function applyCoupon(data: { offerId: string; couponCode: string }): Promise<Offer> {
   return apiRequest<Offer>(`${SALES_API_URL}/offers/coupon`, {
     method: "POST",
@@ -174,6 +212,7 @@ export async function applyCoupon(data: { offerId: string; couponCode: string })
   });
 }
 
+// Aplicar parcelamento a uma oferta
 export async function applyInstallment(data: { offerId: string; installmentId: string }): Promise<Offer> {
   return apiRequest<Offer>(`${SALES_API_URL}/offers/installment`, {
     method: "POST",
@@ -181,7 +220,7 @@ export async function applyInstallment(data: { offerId: string; installmentId: s
   });
 }
 
-// Coupons
+// Cupons
 export async function createCoupon(data: {
   code: string;
   discountPercentage: number;

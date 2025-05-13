@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Package, ShoppingCart, FileText, Tag, Settings, LayoutDashboard, Ticket, DollarSign, ChevronDown, Download } from "lucide-react"
+import { Package, ShoppingCart, FileText, Tag, Settings, LayoutDashboard, Ticket, DollarSign, ChevronDown, Download, CreditCard, Calculator, Clock, Plus } from "lucide-react"
 import { useSidebar } from "./sidebar-provider"
 import { useState } from "react"
 
@@ -120,6 +120,45 @@ export function Sidebar() {
                       Modificadores
                     </Button>
                   </Link>
+                  <Link href="/dashboard/payment-methods" passHref legacyBehavior>
+                    <Button
+                      variant={pathname.startsWith("/dashboard/payment-methods") ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start",
+                        pathname.startsWith("/dashboard/payment-methods") ? "sidebar-active" : "sidebar-item",
+                      )}
+                      onClick={close}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Métodos de Pagamento
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/installments" passHref legacyBehavior>
+                    <Button
+                      variant={pathname.startsWith("/dashboard/installments") ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start",
+                        pathname.startsWith("/dashboard/installments") ? "sidebar-active" : "sidebar-item",
+                      )}
+                      onClick={close}
+                    >
+                      <Calculator className="mr-2 h-4 w-4" />
+                      Parcelas
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/offer-durations" passHref legacyBehavior>
+                    <Button
+                      variant={pathname.startsWith("/dashboard/offer-durations") ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start",
+                        pathname.startsWith("/dashboard/offer-durations") ? "sidebar-active" : "sidebar-item",
+                      )}
+                      onClick={close}
+                    >
+                      <Clock className="mr-2 h-4 w-4" />
+                      Duração de Ofertas
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>
@@ -147,6 +186,19 @@ export function Sidebar() {
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       Ofertas
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/create-offer" passHref legacyBehavior>
+                    <Button
+                      variant={pathname.startsWith("/dashboard/create-offer") ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start",
+                        pathname.startsWith("/dashboard/create-offer") ? "sidebar-active" : "sidebar-item",
+                      )}
+                      onClick={close}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar Oferta
                     </Button>
                   </Link>
                   <Link href="/dashboard/coupons" passHref legacyBehavior>
