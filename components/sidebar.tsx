@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Package, ShoppingCart, FileText, Tag, Settings, LayoutDashboard, Ticket, DollarSign, ChevronDown } from "lucide-react"
+import { Package, ShoppingCart, FileText, Tag, Settings, LayoutDashboard, Ticket, DollarSign, ChevronDown, Download } from "lucide-react"
 import { useSidebar } from "./sidebar-provider"
 import { useState } from "react"
 
@@ -162,8 +162,38 @@ export function Sidebar() {
                       Cupons
                     </Button>
                   </Link>
+                  <Link href="/dashboard/sessions" passHref legacyBehavior>
+                    <Button
+                      variant={pathname.startsWith("/dashboard/sessions") ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start",
+                        pathname.startsWith("/dashboard/sessions") ? "sidebar-active" : "sidebar-item",
+                      )}
+                      onClick={close}
+                    >
+                      <Ticket className="mr-2 h-4 w-4" />
+                      Sessions
+                    </Button>
+                  </Link>
                 </div>
               )}
+            </div>
+            
+            {/* Menu GETS */}
+            <div className="mt-4">
+              <Link href="/dashboard/gets" passHref legacyBehavior>
+                <Button
+                  variant={pathname.startsWith("/dashboard/gets") ? "secondary" : "ghost"}
+                  className={cn(
+                    "justify-start font-semibold",
+                    pathname.startsWith("/dashboard/gets") ? "sidebar-active" : "sidebar-item",
+                  )}
+                  onClick={close}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  GETS (API)
+                </Button>
+              </Link>
             </div>
           </nav>
         </ScrollArea>
