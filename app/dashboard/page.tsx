@@ -7,30 +7,55 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getOffers, type Offer } from "@/lib/api-client"
+import { getAllOffers } from "@/lib/offers-service"
+import { formatCurrency } from "@/lib/offers-service"
+import { useToast } from "@/components/ui/use-toast"
+import type { Offer } from "@/lib/sales-api"
 
 export default function Dashboard() {
-  const [recentOffers, setRecentOffers] = useState<Offer[]>([])
+  const [recentOffers, setRecentOffers] = useState<(Offer & { leadName: string })[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     async function loadData() {
       try {
-        const offers = await getOffers()
-        // Pegar as 5 ofertas mais recentes
-        const sortedOffers = offers
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5)
-        setRecentOffers(sortedOffers)
+        setLoading(true)
+        const offers = await getAllOffers()
+        
+        // Verificar se recebemos ofertas válidas
+        if (offers && offers.length > 0) {
+          // Pegar as 5 ofertas mais recentes
+          const sortedOffers = offers
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 5)
+          setRecentOffers(sortedOffers)
+        } else {
+          // Limpar ofertas existentes se não recebemos dados válidos
+          setRecentOffers([])
+          console.info("Nenhuma oferta encontrada na API")
+          
+          // Notificação suave de que não há dados (opcional)
+          toast({
+            title: "Informação",
+            description: "Não há ofertas disponíveis no momento."
+          })
+        }
       } catch (error) {
         console.error("Erro ao carregar ofertas:", error)
+        setRecentOffers([])
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar ofertas",
+          description: "Não foi possível carregar as ofertas recentes."
+        })
       } finally {
         setLoading(false)
       }
     }
 
     loadData()
-  }, [])
+  }, [toast])
 
   return (
     <div className="grid gap-6">
@@ -40,7 +65,7 @@ export default function Dashboard() {
       <div>
         <h2 className="text-lg font-semibold mb-4">Catálogo</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Link href="/dashboard/products">
+          <Link href="/dashboard/catalog">
             <Card className="dashboard-card border-l-4 border-l-primary-600">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium">Produtos</CardTitle>
@@ -171,7 +196,7 @@ export default function Dashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell>{offer.type === "ONE_TIME" ? "Único" : "Recorrente"}</TableCell>
-                      <TableCell>R$ {offer.total.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(offer.totalPrice)}</TableCell>
                       <TableCell>{new Date(offer.createdAt).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))

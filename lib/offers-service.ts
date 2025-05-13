@@ -1,18 +1,5 @@
-import { getLeadById, getOfferById, getSessionByLeadId } from "./api-fetch";
-import type { Lead, Offer } from "./api-fetch";
-
-// Variável de ambiente - poderia vir de .env no projeto real
-const USE_MOCK_DATA = false;
-
-// Armazenamento temporário para IDs de ofertas conhecidas
-// Em uma aplicação real, isso poderia ser obtido de um serviço de gerenciamento de estado ou de uma API
-const KNOWN_OFFER_IDS = [
-  "3fa85f64-5717-4562-b3fc-2c963f66afa1",
-  "3fa85f64-5717-4562-b3fc-2c963f66afa2",
-  "3fa85f64-5717-4562-b3fc-2c963f66afa3",
-  "3fa85f64-5717-4562-b3fc-2c963f66afa4",
-  "3fa85f64-5717-4562-b3fc-2c963f66afa5"
-];
+import { getLeadById, getOfferById, getAllOffers as getApiOffers } from "./sales-api";
+import type { Lead, Offer } from "./sales-api";
 
 // Função que busca detalhes de um lead, incluindo nome para exibição na lista
 export async function getLeadDetails(leadId: string): Promise<Lead> {
@@ -62,18 +49,31 @@ export async function getOfferWithLeadDetails(offerId: string): Promise<Offer & 
 // Lista todas as ofertas disponíveis no sistema, buscando os detalhes dos leads
 export async function getAllOffers(): Promise<Array<Offer & { leadName: string }>> {
   try {
-    // Como não há um endpoint para listar todas as ofertas, vamos buscar por IDs conhecidos
-    // Isso é uma solução temporária até que um endpoint de listagem seja implementado na API
-    const offersPromises = KNOWN_OFFER_IDS.map(id => getOfferWithLeadDetails(id));
+    // Buscar todas as ofertas da API
+    const offers = await getApiOffers();
     
-    // Aguardar todas as requisições e filtrar possíveis falhas
-    const offersResults = await Promise.allSettled(offersPromises);
-    const offers = offersResults
-      .filter((result): result is PromiseFulfilledResult<Offer & { leadName: string }> => 
-        result.status === "fulfilled")
-      .map(result => result.value);
+    // Adicionar detalhes dos leads para cada oferta
+    const offersWithLeadDetails = await Promise.all(
+      offers.map(async (offer) => {
+        let leadName = "Lead não encontrado";
+        
+        if (offer.leadId) {
+          try {
+            const lead = await getLeadDetails(offer.leadId);
+            leadName = lead.name;
+          } catch (error) {
+            console.error(`Erro ao buscar lead para oferta ${offer.id}:`, error);
+          }
+        }
+        
+        return {
+          ...offer,
+          leadName
+        };
+      })
+    );
     
-    return offers;
+    return offersWithLeadDetails;
   } catch (error) {
     console.error("Erro ao buscar todas as ofertas:", error);
     return [];

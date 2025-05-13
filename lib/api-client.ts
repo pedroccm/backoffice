@@ -3,18 +3,7 @@ function logDebug(message: string, data?: any) {
   console.log(`[API Client] ${message}`, data ? data : "")
 }
 
-// Atualizando a declaração de variáveis para incluir guidelines
-import {
-  mockProducts,
-  mockCategories,
-  mockCurrencies,
-  mockDeliverables,
-  mockGuidelines,
-  mockModifierTypes,
-  mockCoupons,
-} from "./mock-data"
-
-// Mock data - Replace with actual data fetching later
+// Interfaces para tipos de dados
 interface Guideline {
   id: string
   name: string
@@ -68,6 +57,10 @@ interface ModifierType {
   displayName: string
   description: string
   createdBy: string
+  priceAdjustment?: {
+    type: string
+    value: number
+  } | null
   valueRestrictions?: {
     maxValues: number
     restrictedCurrencies?: string[]
@@ -83,69 +76,21 @@ interface Coupon {
   discountValue: number
   status: string
   usageType: "ONE_TIME" | "RECURRING" // New field
+  usedCount?: number
   createdAt: string
   updatedAt: string
 }
 
-// Mock data para ofertas e itens
-const mockOfferItems: OfferItem[] = [
-  {
-    id: "item-1",
-    offerId: "offer-1",
-    productId: "prod-1",
-    productPriceId: "price-1",
-    quantity: 1,
-    unitPrice: 1000.00,
-    lineTotal: 1000.00
-  },
-  {
-    id: "item-2",
-    offerId: "offer-2",
-    productId: "prod-2",
-    productPriceId: "price-2",
-    quantity: 2,
-    unitPrice: 1250.00,
-    lineTotal: 2500.00
-  }
-]
-
-const mockOffers: Offer[] = [
-  {
-    id: "offer-1",
-    leadId: "lead-1",
-    leadName: "João Silva",
-    status: "OPEN",
-    type: "ONE_TIME",
-    subtotal: 1000.00,
-    total: 900.00,
-    items: [mockOfferItems[0]],
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "offer-2",
-    leadId: "lead-2",
-    leadName: "Maria Santos",
-    status: "CONVERTED",
-    type: "RECURRENT",
-    subtotal: 2500.00,
-    total: 2250.00,
-    items: [mockOfferItems[1]],
-    createdAt: "2024-03-14T15:30:00Z",
-    updatedAt: "2024-03-14T16:00:00Z"
-  }
-]
-
 // Variáveis para armazenar os dados em memória
-const products = [...mockProducts]
-const categories = [...mockCategories]
-const currencies = [...mockCurrencies]
-let deliverables = [...mockDeliverables]
-const guidelines = [...mockGuidelines]
-const modifierTypes = [...mockModifierTypes]
-let coupons = [...mockCoupons]
-const offers = [...mockOffers]
-const offerItems = [...mockOfferItems]
+const products: Product[] = []
+const categories: Category[] = []
+const currencies: Currency[] = []
+let deliverables: Deliverable[] = []
+const guidelines: Guideline[] = []
+const modifierTypes: ModifierType[] = []
+let coupons: Coupon[] = []
+const offers: Offer[] = []
+const offerItems: OfferItem[] = []
 
 // Function to calculate adjusted price based on modifier
 export function calculateAdjustedPrice(basePrice: number, modifierTypeId: string | null): number {
@@ -168,8 +113,8 @@ export async function getGuidelines(): Promise<Guideline[]> {
         return [...acc, ...product.guidelines]
       }, [] as Guideline[])
 
-      // Adicionar também as diretrizes de mockGuidelines que não estão associadas a produtos
-      const standaloneGuidelines = guidelines.filter((g) => !g.productId || !products.some((p) => p.id === g.productId))
+      // Adicionar também as diretrizes de guidelines que não estão associadas a produtos
+      const standaloneGuidelines = guidelines.filter((g: Guideline) => !g.productId || !products.some((p) => p.id === g.productId))
 
       resolve([...allGuidelines, ...standaloneGuidelines])
     }, 500)
@@ -345,19 +290,25 @@ export async function deleteGuideline(id: string): Promise<void> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...categories])
-    }, 500)
-  })
+  try {
+    const response = await fetch('/api/catalog/categories');
+    if (!response.ok) throw new Error('Falha ao buscar categorias');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar categorias:', error);
+    return [];
+  }
 }
 
 export async function getCoupons(): Promise<Coupon[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...coupons])
-    }, 500)
-  })
+  try {
+    const response = await fetch('/api/sales/coupons');
+    if (!response.ok) throw new Error('Falha ao buscar cupons');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar cupons:', error);
+    return [];
+  }
 }
 
 export async function deleteCoupon(id: string): Promise<void> {
@@ -370,19 +321,25 @@ export async function deleteCoupon(id: string): Promise<void> {
 }
 
 export async function getCurrencies(): Promise<Currency[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...currencies])
-    }, 500)
-  })
+  try {
+    const response = await fetch('/api/catalog/currencies');
+    if (!response.ok) throw new Error('Falha ao buscar moedas');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar moedas:', error);
+    return [];
+  }
 }
 
 export async function getDeliverables(): Promise<Deliverable[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...deliverables])
-    }, 500)
-  })
+  try {
+    const response = await fetch('/api/catalog/deliverables');
+    if (!response.ok) throw new Error('Falha ao buscar entregáveis');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar entregáveis:', error);
+    return [];
+  }
 }
 
 export async function deleteDeliverable(id: string): Promise<void> {
@@ -395,11 +352,14 @@ export async function deleteDeliverable(id: string): Promise<void> {
 }
 
 export async function getProducts(): Promise<Product[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...products])
-    }, 500)
-  })
+  try {
+    const response = await fetch('/api/catalog/products');
+    if (!response.ok) throw new Error('Falha ao buscar produtos');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar produtos:', error);
+    return [];
+  }
 }
 
 export async function getCouponById(id: string): Promise<Coupon> {
@@ -632,11 +592,14 @@ export async function updateProduct(id: string, product: Partial<Product>): Prom
 // Add these functions to the api-client.ts file
 
 export async function getModifierTypes(): Promise<ModifierType[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...modifierTypes])
-    }, 500)
-  })
+  try {
+    const response = await fetch('/api/catalog/modifier-types');
+    if (!response.ok) throw new Error('Falha ao buscar tipos de modificadores');
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar tipos de modificadores:', error);
+    return [];
+  }
 }
 
 export async function getModifierTypeByKey(key: string): Promise<ModifierType> {
