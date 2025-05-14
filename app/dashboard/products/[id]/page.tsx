@@ -96,6 +96,11 @@ export default function ProductDetailsPage() {
       console.log('Produto carregado:', product);
       console.log('Entregáveis do produto:', product.deliverables);
       console.log('Lista de entregáveis disponíveis:', deliverables);
+      
+      // Log detalhado para depuração de entregáveis
+      if (product.deliverables && product.deliverables.length > 0) {
+        console.log('Primeiro entregável do produto (estrutura):', JSON.stringify(product.deliverables[0]));
+      }
     }
   }, [product, deliverables]);
 
@@ -110,32 +115,35 @@ export default function ProductDetailsPage() {
     return modifier?.displayName || "Nenhum"
   }
 
-  const getDeliverableName = (deliverableId: string): string => {
-    // Log para debug
-    console.log('Buscando entregável com ID:', deliverableId);
+  const getDeliverableName = (deliverableId: string | any): string => {
+    // 1. Se for um objeto com propriedade name, use-a diretamente
+    if (deliverableId && typeof deliverableId === 'object' && deliverableId.name) {
+      return deliverableId.name;
+    }
     
-    // Verificar se a lista de entregáveis está carregada
+    // 2. Se a lista de entregáveis não estiver carregada
     if (!deliverables || deliverables.length === 0) {
-      console.log('Lista de entregáveis vazia ou não carregada');
-      return deliverableId;
+      return "Carregando...";
     }
     
-    // Tentar encontrar o entregável pelo ID
-    const deliverable = deliverables.find(d => d.id === deliverableId);
-    console.log('Entregável encontrado:', deliverable);
-    
-    // Se encontrado, retornar o nome, caso contrário retornar o ID
-    if (deliverable && deliverable.name) {
-      return deliverable.name;
+    // 3. Se for um ID, procure na lista de entregáveis
+    if (typeof deliverableId === 'string') {
+      // Primeiro tenta encontrar pelo ID diretamente
+      let deliverable = deliverables.find(d => d.id === deliverableId);
+      
+      // Se não encontrou, tenta procurar por algum entregável com o campo deliverableId igual ao ID fornecido
+      if (!deliverable) {
+        deliverable = deliverables.find(d => (d as any).deliverableId === deliverableId);
+      }
+      
+      // Se encontrou um entregável, retorne o nome
+      if (deliverable && deliverable.name) {
+        return deliverable.name;
+      }
     }
     
-    // Se não encontrou, verificar se o objeto de entregável já é o objeto completo 
-    // (pode ocorrer dependendo de como a API retorna os dados)
-    if (typeof deliverableId === 'object' && (deliverableId as any).name) {
-      return (deliverableId as any).name;
-    }
-    
-    return deliverableId;
+    // 4. Se chegou até aqui, tenta converter para string e retorna como fallback
+    return typeof deliverableId === 'string' ? deliverableId : String(deliverableId);
   }
 
   // Funções para lidar com remoção de itens
@@ -161,22 +169,36 @@ export default function ProductDetailsPage() {
 
   const handleDeleteDeliverable = async (deliverableId: string) => {
     try {
-      if (!product) return
+      if (!product) return;
       
       console.log(`Tentando remover entregável ${deliverableId} do produto ${product.id}`);
+      console.log('Tipo de deliverableId:', typeof deliverableId);
       
-      const result = await deleteProductDeliverable(product.id, deliverableId);
-      console.log('Resposta da API:', result);
+      // Mostrar toast de carregamento
+      toast({
+        title: "Removendo entregável...",
+        description: "Aguarde enquanto o entregável é removido.",
+      });
+      
+      // Verificação e conversão adicional se necessário
+      const deliverableIdString = typeof deliverableId === 'object' 
+        ? deliverableId.id || deliverableId.deliverableId || String(deliverableId)
+        : String(deliverableId);
+      
+      console.log('ID do entregável a ser excluído:', deliverableIdString);
+      console.log('ID do produto atual:', product.id);
+      
+      const result = await deleteProductDeliverable(product.id, deliverableIdString);
+      console.log('Resposta da API após exclusão:', result);
       
       toast({
         title: "Entregável removido",
         description: "O entregável foi removido com sucesso."
       });
       
-      // Recarregar dados após um breve atraso para garantir que o servidor tenha processado a exclusão
-      setTimeout(() => {
-        loadData();
-      }, 500);
+      // Recarregar dados após a exclusão
+      await loadData();
+      
     } catch (error) {
       console.error("Erro ao remover entregável:", error);
       
@@ -389,23 +411,56 @@ export default function ProductDetailsPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      product.deliverables.map((deliverable) => (
-                        <TableRow key={deliverable.id}>
-                          <TableCell className="font-medium">
-                            {getDeliverableName(deliverable.id)}
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteDeliverable(deliverable.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Remover</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      product.deliverables.map((deliverable) => {
+                        console.log('Renderizando entregável:', deliverable);
+                        
+                        // Extrair o ID correto do entregável
+                        let idParaBusca;
+                        let idParaExclusao;
+                        if (typeof deliverable === 'object') {
+                          // Pode ser um objeto com deliverableId 
+                          if ((deliverable as any).deliverableId) {
+                            idParaBusca = (deliverable as any).deliverableId;
+                            idParaExclusao = (deliverable as any).deliverableId;
+                          } 
+                          // Pode ser um objeto com id
+                          else if (deliverable.id) {
+                            idParaBusca = deliverable.id;
+                            idParaExclusao = deliverable.id;
+                          }
+                          // Pode ser um objeto com o entregável aninhado
+                          else if ((deliverable as any).deliverable && (deliverable as any).deliverable.id) {
+                            idParaBusca = (deliverable as any).deliverable.id;
+                            idParaExclusao = (deliverable as any).deliverable.id;
+                          }
+                        } else {
+                          // Caso seja apenas um ID
+                          idParaBusca = deliverable;
+                          idParaExclusao = deliverable;
+                        }
+                        
+                        console.log('ID usado para busca:', idParaBusca);
+                        console.log('ID que será usado para exclusão:', idParaExclusao);
+                        const nomeEntregavel = getDeliverableName(idParaBusca);
+                        
+                        return (
+                          <TableRow key={typeof deliverable === 'object' ? deliverable.id : String(deliverable)}>
+                            <TableCell className="font-medium">
+                              {nomeEntregavel}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDeleteDeliverable(idParaExclusao)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Remover</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>

@@ -163,9 +163,9 @@ export async function deleteProductDeliverable(productId: string, deliverableId:
   return apiRequest<Product>(`${CATALOG_API_URL}/products/${productId}/deliverables/${deliverableId}`, {
     method: "DELETE",
     body: JSON.stringify({
-      productId,
-      deliverableId
-    }),
+      productId: productId,
+      deliverableId: deliverableId
+    })
   });
 }
 
