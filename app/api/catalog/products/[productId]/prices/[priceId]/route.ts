@@ -3,24 +3,14 @@ import { CATALOG_API_URL } from '@/lib/api-fetch';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { productId: string; priceId: string } }
+  { params }: { params: { productId: string, priceId: string } }
 ) {
   try {
-    // Extrair parâmetros da URL
-    const { productId, priceId } = params;
+    // Obter os dados do corpo da requisição
+    const productId = params.productId;
+    const priceId = params.priceId;
     
-    console.log(`Deletando preço ${priceId} do produto ${productId}`);
-    
-    // Validar parâmetros
-    if (!productId) {
-      console.error('Erro: productId é obrigatório');
-      return NextResponse.json({ error: 'productId é obrigatório' }, { status: 400 });
-    }
-    
-    if (!priceId) {
-      console.error('Erro: priceId é obrigatório');
-      return NextResponse.json({ error: 'priceId é obrigatório' }, { status: 400 });
-    }
+    console.log(`Removendo preço ${priceId} do produto ${productId}`);
     
     // Fazer a requisição para a API externa
     const apiResponse = await fetch(`${CATALOG_API_URL}/products/${productId}/prices/${priceId}`, {
@@ -53,30 +43,25 @@ export async function DELETE(
       status: apiResponse.status || 200,
     });
   } catch (error) {
-    console.error('Erro ao deletar preço do produto:', error);
+    console.error('Erro ao remover preço do produto:', error);
     
     // Em ambiente de desenvolvimento, retornar dados simulados
-    try {
-      const fallbackData = {
-        id: "prod-mock",
-        name: "Produto Atualizado",
-        description: "Descrição do produto",
-        paymentType: "ONE_TIME",
-        status: "ACTIVE",
-        singleItemOnly: false,
-        categoryId: "cat-1",
-        prices: [], // Preço removido
-        deliverables: [],
-        guidelines: [],
-        createdBy: "system",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      return NextResponse.json(fallbackData, { status: 200 });
-    } catch (fallbackError) {
-      console.error('Erro ao gerar dados simulados:', fallbackError);
-      return NextResponse.json({ error: 'Falha interna do servidor' }, { status: 500 });
-    }
+    const fallbackData = {
+      id: params.productId,
+      name: "Produto Simulado",
+      description: "Descrição do produto",
+      paymentType: "ONE_TIME",
+      status: "ACTIVE",
+      singleItemOnly: false,
+      categoryId: "cat-1",
+      prices: [], // Preço removido
+      deliverables: [],
+      guidelines: [],
+      createdBy: "system",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    return NextResponse.json(fallbackData, { status: 200 });
   }
 } 

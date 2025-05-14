@@ -3,17 +3,17 @@ import { CATALOG_API_URL } from '@/lib/api-fetch';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { productId: string, deliverableId: string } }
+  { params }: { params: { productId: string, guidelineId: string } }
 ) {
   try {
     // Obter os dados do corpo da requisição
     const productId = params.productId;
-    const deliverableId = params.deliverableId;
+    const guidelineId = params.guidelineId;
     
-    console.log(`Tentando remover entregável ${deliverableId} do produto ${productId}`);
+    console.log(`Removendo diretriz ${guidelineId} do produto ${productId}`);
     
     // Fazer a requisição para a API externa
-    const apiResponse = await fetch(`${CATALOG_API_URL}/products/${productId}/deliverables/${deliverableId}`, {
+    const apiResponse = await fetch(`${CATALOG_API_URL}/products/${productId}/guidelines/${guidelineId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ export async function DELETE(
           ? { 'Authorization': request.headers.get('Authorization') || '' } 
           : {}),
       },
-      body: JSON.stringify({ productId, deliverableId }),
+      body: JSON.stringify({}),
     });
     
     // Se a resposta não for bem-sucedida, trate o erro
@@ -43,7 +43,7 @@ export async function DELETE(
       status: apiResponse.status || 200,
     });
   } catch (error) {
-    console.error('Erro ao remover entregável do produto:', error);
+    console.error('Erro ao remover diretriz do produto:', error);
     
     // Em ambiente de desenvolvimento, retornar dados simulados
     const fallbackData = {
@@ -55,8 +55,8 @@ export async function DELETE(
       singleItemOnly: false,
       categoryId: "cat-1",
       prices: [],
-      deliverables: [], // O entregável foi removido
-      guidelines: [],
+      deliverables: [],
+      guidelines: [], // Diretriz removida
       createdBy: "system",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

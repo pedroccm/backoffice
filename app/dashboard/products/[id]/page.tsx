@@ -110,7 +110,10 @@ export default function ProductDetailsPage() {
     return modifier?.displayName || "Nenhum"
   }
 
-  const getDeliverableName = (deliverableId: string): string => {
+  const getDeliverableName = (deliverableRef: any): string => {
+    // Verificar se o objeto entregável tem a estrutura esperada
+    const deliverableId = deliverableRef?.deliverableId || deliverableRef;
+    
     // Log para debug
     console.log('Buscando entregável com ID:', deliverableId);
     
@@ -127,12 +130,6 @@ export default function ProductDetailsPage() {
     // Se encontrado, retornar o nome, caso contrário retornar o ID
     if (deliverable && deliverable.name) {
       return deliverable.name;
-    }
-    
-    // Se não encontrou, verificar se o objeto de entregável já é o objeto completo 
-    // (pode ocorrer dependendo de como a API retorna os dados)
-    if (typeof deliverableId === 'object' && (deliverableId as any).name) {
-      return (deliverableId as any).name;
     }
     
     return deliverableId;
@@ -216,7 +213,9 @@ export default function ProductDetailsPage() {
 
   // Função para navegar para a página de edição
   const handleEditProduct = () => {
-    router.push(`/dashboard/products/${productId}/edit`)
+    console.log(`Navegando para edição do produto ${productId}`);
+    // Usar o router.push com a URL completa
+    window.location.href = `/dashboard/products/${productId}/edit`;
   }
 
   if (loading) {
@@ -392,7 +391,7 @@ export default function ProductDetailsPage() {
                       product.deliverables.map((deliverable) => (
                         <TableRow key={deliverable.id}>
                           <TableCell className="font-medium">
-                            {getDeliverableName(deliverable.id)}
+                            {getDeliverableName(deliverable)}
                           </TableCell>
                           <TableCell>
                             <Button 
@@ -465,4 +464,4 @@ export default function ProductDetailsPage() {
       </Tabs>
     </div>
   )
-}
+} 

@@ -8,7 +8,7 @@ import { getProductById, type Product } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 import { ContractGenerator } from "@/components/contract-generator"
 
-export default function ProductContractPage({ params }: { params: { id: string } }) {
+export default function ProductContractPage({ params }: { params: { productId: string } }) {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -17,7 +17,7 @@ export default function ProductContractPage({ params }: { params: { id: string }
   useEffect(() => {
     async function loadProduct() {
       try {
-        const data = await getProductById(params.id)
+        const data = await getProductById(params.productId)
         setProduct(data)
       } catch (error) {
         toast({
@@ -32,7 +32,7 @@ export default function ProductContractPage({ params }: { params: { id: string }
     }
 
     loadProduct()
-  }, [params.id, router, toast])
+  }, [params.productId, router, toast])
 
   if (loading) {
     return (
@@ -64,4 +64,4 @@ export default function ProductContractPage({ params }: { params: { id: string }
       <ContractGenerator product={product} />
     </div>
   )
-}
+} 

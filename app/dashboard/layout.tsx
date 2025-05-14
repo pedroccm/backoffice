@@ -6,7 +6,7 @@ import { Package, Tag, Ticket, FileText } from "lucide-react"
 const menuItems = [
   {
     title: "Produtos",
-    href: "/dashboard/products",
+    href: "/dashboard/catalog",
     icon: Package,
   },
   {

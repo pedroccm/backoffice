@@ -55,12 +55,12 @@ export function Sidebar() {
               </Button>
               {catalogoExpanded && (
                 <div className="ml-4 grid gap-1">
-                  <Link href="/dashboard/products" passHref legacyBehavior>
+                  <Link href="/dashboard/catalog" passHref legacyBehavior>
                     <Button
-                      variant={pathname.startsWith("/dashboard/products") ? "secondary" : "ghost"}
+                      variant={pathname.startsWith("/dashboard/catalog") || pathname.startsWith("/dashboard/products") ? "secondary" : "ghost"}
                       className={cn(
                         "justify-start",
-                        pathname.startsWith("/dashboard/products") ? "sidebar-active" : "sidebar-item",
+                        pathname.startsWith("/dashboard/catalog") || pathname.startsWith("/dashboard/products") ? "sidebar-active" : "sidebar-item",
                       )}
                       onClick={close}
                     >

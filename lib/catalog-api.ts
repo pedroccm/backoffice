@@ -78,6 +78,16 @@ export interface ModifierType {
   updatedAt: string;
 }
 
+// Interface para permitir referência às diretrizes (guidelines)
+export interface Guideline {
+  id: string;
+  name: string;
+  description: string;
+  productId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Produtos
 export async function getProducts(): Promise<Product[]> {
   return apiRequest<Product[]>('/api/catalog/products');
@@ -87,17 +97,17 @@ export async function getProductById(id: string): Promise<Product> {
   return apiRequest<Product>(`${CATALOG_API_URL}/products/find/${id}`);
 }
 
-export async function createProduct(data: {
+export async function createProduct(productData: {
   name: string;
   description: string;
   paymentType: "ONE_TIME" | "RECURRENT";
   singleItemOnly: boolean;
   categoryId: string;
-  createdBy: string;
+  createdBy?: string;
 }): Promise<Product> {
   return apiRequest<Product>(`${CATALOG_API_URL}/products`, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify(productData),
   });
 }
 
