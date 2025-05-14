@@ -814,6 +814,7 @@ export type Offer = {
   projectStartDate?: string
   paymentStartDate?: string
   payDay?: number
+  isFixedTermOffer?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -922,14 +923,16 @@ export async function getOfferById(id: string): Promise<Offer> {
       type: offerData.type,
       subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
       total: offerData.totalPrice || offerData.total || 0,
-      items: offerData.offerItems?.map(item => ({
-        id: item.id,
-        productId: item.productId,
-        priceId: item.priceId,
-        price: item.price,
-        quantity: item.quantity,
-        totalPrice: item.totalPrice
-      })) || [],
+      items: Array.isArray(offerData.offerItems) 
+        ? offerData.offerItems?.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            priceId: item.priceId,
+            price: item.price,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice
+          }))
+        : [],
       couponId: offerData.couponId,
       couponDiscountPercentage: offerData.couponDiscountPercentage,
       couponDiscountTotal: offerData.couponDiscountTotal,
@@ -944,6 +947,7 @@ export async function getOfferById(id: string): Promise<Offer> {
       projectStartDate: offerData.projectStartDate,
       paymentStartDate: offerData.paymentStartDate,
       payDay: offerData.payDay,
+      isFixedTermOffer: offerData.isFixedTermOffer,
       createdAt: offerData.createdAt,
       updatedAt: offerData.updatedAt
     };
@@ -1436,27 +1440,65 @@ export async function getOfferDurationById(id: string): Promise<OfferDuration> {
   }
 }
 
-export async function createOfferDuration(data: {
-  months: number;
-  discountPercentage: number;
-}): Promise<OfferDuration> {
+// Função para aplicar status de fidelização à oferta
+export async function applyFixedTerm({ offerId, isFixedTermOffer }: { offerId: string, isFixedTermOffer: boolean }): Promise<Offer> {
   try {
-    const response = await fetch('/api/sales/offer-durations', {
+    const response = await fetch('/api/sales/offers/fixed-term', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ offerId, isFixedTermOffer }),
     });
     
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Falha ao criar duração de oferta: ${response.status} ${errorText}`);
-    }
+    if (!response.ok) throw new Error('Falha ao aplicar fidelização à oferta');
     
-    return await response.json();
+    const offerData = await response.json();
+    console.log("Fidelização aplicada com sucesso:", offerData);
+    
+    // Salvar em cache
+    saveOffer(offerId, offerData);
+    
+    // Formatar resposta para o frontend
+    const offer: Offer = {
+      id: offerData.id,
+      leadId: offerData.leadId || "",
+      status: offerData.status,
+      type: offerData.type,
+      subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
+      total: offerData.totalPrice || offerData.total || 0,
+      items: Array.isArray(offerData.offerItems) 
+        ? offerData.offerItems?.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            priceId: item.priceId,
+            price: item.price,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice
+          }))
+        : [],
+      couponId: offerData.couponId,
+      couponDiscountPercentage: offerData.couponDiscountPercentage,
+      couponDiscountTotal: offerData.couponDiscountTotal,
+      installmentId: offerData.installmentId,
+      installmentMonths: offerData.installmentMonths,
+      installmentDiscountPercentage: offerData.installmentDiscountPercentage,
+      installmentDiscountTotal: offerData.installmentDiscountTotal,
+      offerDurationId: offerData.offerDurationId,
+      offerDurationMonths: offerData.offerDurationMonths,
+      offerDurationDiscountPercentage: offerData.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offerData.offerDurationDiscountTotal,
+      projectStartDate: offerData.projectStartDate,
+      paymentStartDate: offerData.paymentStartDate,
+      payDay: offerData.payDay,
+      isFixedTermOffer: offerData.isFixedTermOffer,
+      createdAt: offerData.createdAt,
+      updatedAt: offerData.updatedAt
+    };
+    
+    return offer;
   } catch (error) {
-    console.error('Erro ao criar duração de oferta:', error);
+    console.error('Erro ao aplicar fidelização à oferta:', error);
     throw error;
   }
 }
@@ -1473,18 +1515,6 @@ export type ProductDetail = {
   description: string;
   paymentType: "ONE_TIME" | "RECURRENT";
   prices: ProductPrice[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Offer = {
-  id: string;
-  items: OfferItem[];
-  leadId: string;
-  subtotal: number;
-  total: number;
-  installmentId?: string;
-  offerDurationId?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -1574,14 +1604,16 @@ export async function applyInstallment(data: {
       type: offerData.type,
       subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
       total: offerData.totalPrice || offerData.total || 0,
-      items: offerData.offerItems?.map(item => ({
-        id: item.id,
-        productId: item.productId,
-        priceId: item.priceId,
-        price: item.price,
-        quantity: item.quantity,
-        totalPrice: item.totalPrice
-      })) || [],
+      items: Array.isArray(offerData.offerItems) 
+        ? offerData.offerItems?.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            priceId: item.priceId,
+            price: item.price,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice
+          }))
+        : [],
       couponId: offerData.couponId,
       couponDiscountPercentage: offerData.couponDiscountPercentage,
       couponDiscountTotal: offerData.couponDiscountTotal,
@@ -1596,6 +1628,7 @@ export async function applyInstallment(data: {
       projectStartDate: offerData.projectStartDate,
       paymentStartDate: offerData.paymentStartDate,
       payDay: offerData.payDay,
+      isFixedTermOffer: offerData.isFixedTermOffer,
       createdAt: offerData.createdAt,
       updatedAt: offerData.updatedAt
     };
@@ -1643,14 +1676,16 @@ export async function applyOfferDuration(data: {
       type: offerData.type,
       subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
       total: offerData.totalPrice || offerData.total || 0,
-      items: offerData.offerItems?.map(item => ({
-        id: item.id,
-        productId: item.productId,
-        priceId: item.priceId,
-        price: item.price,
-        quantity: item.quantity,
-        totalPrice: item.totalPrice
-      })) || [],
+      items: Array.isArray(offerData.offerItems) 
+        ? offerData.offerItems?.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            priceId: item.priceId,
+            price: item.price,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice
+          }))
+        : [],
       couponId: offerData.couponId,
       couponDiscountPercentage: offerData.couponDiscountPercentage,
       couponDiscountTotal: offerData.couponDiscountTotal,
@@ -1665,6 +1700,7 @@ export async function applyOfferDuration(data: {
       projectStartDate: offerData.projectStartDate,
       paymentStartDate: offerData.paymentStartDate,
       payDay: offerData.payDay,
+      isFixedTermOffer: offerData.isFixedTermOffer,
       createdAt: offerData.createdAt,
       updatedAt: offerData.updatedAt
     };
