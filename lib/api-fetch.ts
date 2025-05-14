@@ -10,7 +10,8 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
   const isExternalCatalogApi = url.includes(CATALOG_API_URL);
   
   // Log para debug
-  console.debug(`Iniciando requisição para: ${url} (${isLocalApi ? 'API local' : 'API externa'})`);
+  console.debug(`[API-FETCH] Iniciando requisição para: ${url} (${isLocalApi ? 'API local' : 'API externa'})`);
+  console.debug('[API-FETCH] Opções da requisição:', options);
   
   try {
     // Adiciona timeout para evitar requisições penduradas
@@ -29,7 +30,7 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
     clearTimeout(timeoutId);
 
     // Log para debug sobre a resposta
-    console.debug(`Resposta de ${url}: status ${response.status}`);
+    console.debug(`[API-FETCH] Resposta de ${url}: status ${response.status}`);
 
     if (!response.ok) {
       // Tenta extrair mensagem de erro da resposta
@@ -44,131 +45,86 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
             // Tentar converter para JSON
             const errorData = JSON.parse(errorText);
             errorDetails = JSON.stringify(errorData);
-            console.error(`Erro na resposta de ${url}:`, errorData);
+            console.error(`[API-FETCH] Erro na resposta de ${url}:`, errorData);
           } catch (jsonError) {
             // Se não for JSON válido, usar o texto bruto
             errorDetails = errorText;
-            console.error(`Erro na resposta de ${url} (texto não-JSON):`, errorText);
+            console.error(`[API-FETCH] Erro na resposta de ${url} (texto não-JSON):`, errorText);
           }
         } else {
           errorDetails = '[Resposta vazia]';
-          console.error(`Erro na resposta de ${url}: Resposta vazia`);
+          console.error(`[API-FETCH] Erro na resposta de ${url}: Resposta vazia`);
         }
       } catch (e) {
         errorDetails = '[Erro ao ler resposta]';
-        console.error(`Não foi possível extrair detalhes do erro de ${url}:`, e);
+        console.error(`[API-FETCH] Não foi possível extrair detalhes do erro de ${url}:`, e);
       }
       
+      // Tratamento especial para erros 404 na API externa do catálogo
+      if (isExternalCatalogApi && response.status === 404) {
+        console.warn(`[API-FETCH] Erro 404 na API externa do catálogo: ${url}`);
+        
+        // Verificar se a URL contém um ID para tentar uma abordagem alternativa
+        if (url.includes('/products/') && !url.includes('/products/find/')) {
+          const alternativeUrl = url.replace(/\/products\/([^\/]+)$/, '/products');
+          console.warn(`[API-FETCH] Tentando abordagem alternativa: ${alternativeUrl}`);
+          
+          try {
+            const body = options?.body ? JSON.parse(options.body as string) : {};
+            
+            // Assegurar que o ID que estava na URL está no corpo
+            const id = url.match(/\/products\/([^\/]+)$/)?.[1];
+            if (id && !body.id) {
+              body.id = id;
+            }
+            
+            const alternativeResponse = await fetch(alternativeUrl, {
+              ...options,
+              method: 'PUT',
+              body: JSON.stringify(body),
+              headers: options?.headers || {
+                "Content-Type": "application/json"
+              }
+            });
+            
+            if (alternativeResponse.ok) {
+              console.warn(`[API-FETCH] A abordagem alternativa foi bem-sucedida: ${alternativeUrl}`);
+              return alternativeResponse.json();
+            } else {
+              // Se a abordagem alternativa também falhar, lançar erro
+              console.error(`[API-FETCH] Falha na abordagem alternativa: ${alternativeResponse.status}`);
+              throw new Error(`API externa indisponível. Erro: ${alternativeResponse.status}. Por favor, tente novamente mais tarde.`);
+            }
+          } catch (altError) {
+            console.error(`[API-FETCH] Erro na abordagem alternativa:`, altError);
+            throw new Error(`Não foi possível se conectar à API externa. ${altError instanceof Error ? altError.message : String(altError)}`);
+          }
+        }
+      }
+      
+      // Lançar erro para qualquer outro caso
       throw new Error(
         `Erro na requisição: ${response.status} - ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`
       );
     }
 
-    // Para respostas vazias sem conteúdo
-    if (response.status === 204) {
-      console.debug(`Resposta sem conteúdo de ${url}`);
-      return {} as T;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return response.json();
+    } else {
+      console.warn(`[API-FETCH] Resposta não é JSON: ${contentType} de ${url}`);
+      // @ts-ignore - Permitir retornar texto se não for JSON
+      return response.text();
     }
-
-    // Verifica o tipo de conteúdo
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      console.warn(`Resposta não-JSON de ${url}: ${contentType}`);
-      // Para APIs que não retornam JSON
-      const text = await response.text();
-      
-      // Tentar converter para JSON mesmo assim (algumas APIs retornam JSON sem o Content-Type correto)
-      try {
-        if (text.trim()) {
-          const data = JSON.parse(text);
-          console.debug(`Dados recebidos de ${url} (convertidos de texto): ${Array.isArray(data) ? `Array com ${data.length} itens` : 'Objeto'}`);
-          return data as T;
-        }
-      } catch (e) {
-        console.debug(`Não foi possível converter resposta de texto para JSON: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
-      }
-      
-      // Se chegou aqui, retornar um objeto vazio ou array conforme o tipo esperado
-      console.warn(`Retornando dados vazios para resposta não-JSON de ${url}`);
-      return (Array.isArray({} as T) ? [] : {}) as T;
-    }
-
-    let data;
-    try {
-      const text = await response.text();
-      
-      // Verificar se há conteúdo na resposta
-      if (!text.trim()) {
-        console.warn(`Resposta JSON vazia de ${url}`);
-        return (Array.isArray({} as T) ? [] : {}) as T;
-      }
-      
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error(`Erro ao parsear JSON de ${url}:`, e);
-      throw new Error(`Erro ao processar resposta da API: ${e instanceof Error ? e.message : String(e)}`);
+  } catch (error: any) {
+    console.error(`[API-FETCH] Erro na requisição para ${url}:`, error);
+    
+    // Tratamento especial para erros de timeout ou aborts
+    if (error.name === 'AbortError') {
+      throw new Error(`Tempo limite excedido ao conectar com a API. Por favor, verifique sua conexão e tente novamente.`);
     }
     
-    // Log para debug sobre o resultado
-    console.debug(`Dados recebidos de ${url}: ${Array.isArray(data) ? `Array com ${data.length} itens` : 'Objeto'}`);
-    
-    return data as T;
-  } catch (error) {
-    // Tratamento específico para erros de timeout
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      console.error(`Timeout na requisição para ${url}`);
-      
-      if (isExternalSalesApi || isExternalCatalogApi) {
-        console.warn(`Redirecionando para API local equivalente após timeout em API externa ${url}`);
-        
-        // Redirecionar para a API local equivalente
-        const localUrl = url
-          .replace(SALES_API_URL, '/api/sales')
-          .replace(CATALOG_API_URL, '/api/catalog');
-        
-        console.debug(`Tentando API local: ${localUrl}`);
-        return apiRequest<T>(localUrl, options);
-      }
-    }
-    
-    // Para APIs locais, podemos tratar o erro de forma diferente para não quebrar a interface
-    if (isLocalApi) {
-      console.error(`Erro ao acessar API local ${url}:`, error);
-      
-      // Verificar o tipo de retorno esperado com base no URL
-      if (url.endsWith('/offers') || url.endsWith('/products') || 
-          url.endsWith('/categories') || url.endsWith('/currencies') || 
-          url.endsWith('/deliverables') || url.endsWith('/modifier-types') ||
-          url.endsWith('/coupons')) {
-        // Endpoints que retornam arrays
-        console.warn(`Retornando array vazio como fallback para ${url}`);
-        return [] as unknown as T;
-      }
-      
-      // Endpoints que retornam objetos
-      console.warn(`Retornando objeto vazio como fallback para ${url}`);
-      return {} as T;
-    }
-    
-    // Se a API externa falhar e não for API local, tenta redirecionar para a API local
-    if (isExternalSalesApi || isExternalCatalogApi) {
-      console.warn(`API externa falhou: ${url}. Erro: ${error instanceof Error ? error.message : String(error)}`);
-      console.warn(`Tentando redirecionar para API local`);
-      
-      try {
-        // Redirecionar para a API local equivalente
-        const localUrl = url
-          .replace(SALES_API_URL, '/api/sales')
-          .replace(CATALOG_API_URL, '/api/catalog');
-        
-        console.debug(`Tentando API local: ${localUrl}`);
-        return apiRequest<T>(localUrl, options);
-      } catch (localError) {
-        console.error(`Também falhou ao acessar API local ${url}:`, localError);
-        throw error; // Repassar o erro original se a API local também falhar
-      }
-    }
-    
+    // Reenviar o erro original sem fallbacks
     throw error;
   }
 }

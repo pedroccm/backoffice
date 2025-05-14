@@ -84,7 +84,8 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getProductById(id: string): Promise<Product> {
-  return apiRequest<Product>(`${CATALOG_API_URL}/products/find/${id}`);
+  console.log(`[CATALOG-API] Buscando produto com ID: ${id}`);
+  return apiRequest<Product>(`/api/catalog/products/find/${id}`);
 }
 
 export async function createProduct(data: {
@@ -110,7 +111,7 @@ export async function updateProduct(data: {
   singleItemOnly: boolean;
   categoryId: string;
 }): Promise<Product> {
-  return apiRequest<Product>(`${CATALOG_API_URL}/products/${data.id}`, {
+  return apiRequest<Product>(`/api/catalog/products/${data.id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });

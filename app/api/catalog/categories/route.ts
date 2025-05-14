@@ -23,28 +23,109 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Erro na API de categorias:', error);
     
-    // Em ambiente de desenvolvimento, retornar dados simulados
-    const mockData = [
+    // Categorias correspondentes aos produtos atualizados
+    const realCategories = [
       {
-        id: "cat-1",
-        name: "Eletrônicos",
-        description: "Produtos eletrônicos como smartphones, tablets e laptops",
+        id: "cat-growth",
+        name: "Growth",
+        description: "Serviços de assessoria de growth e análise de métricas",
         status: "ACTIVE",
         createdBy: "system",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
       {
-        id: "cat-2",
-        name: "Serviços",
-        description: "Serviços de consultoria e suporte",
+        id: "cat-media",
+        name: "Mídia Paga",
+        description: "Serviços de gestão de mídia paga e campanhas",
         status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-creative",
+        name: "Criativos",
+        description: "Desenvolvimento de artes e criativos para anúncios",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-web",
+        name: "Web Design",
+        description: "Desenvolvimento de sites e landing pages",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-data",
+        name: "Dados e Análise",
+        description: "Gestão e visualização de dados e métricas",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-journey",
+        name: "Jornada de Cliente",
+        description: "Desenvolvimento de jornadas de relacionamento com o cliente",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-sales",
+        name: "Soluções de Vendas",
+        description: "Serviços e soluções para otimização do processo de vendas",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-content",
+        name: "Conteúdo e Social Media",
+        description: "Estratégias de conteúdo e gestão de redes sociais",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-misc",
+        name: "Outros",
+        description: "Outros serviços e produtos diversos",
+        status: "ACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-1",
+        name: "[DEL] Eletrônicos",
+        description: "Produtos eletrônicos como smartphones, tablets e laptops",
+        status: "INACTIVE",
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "cat-2",
+        name: "[DEL] Serviços",
+        description: "Serviços de consultoria e suporte",
+        status: "INACTIVE",
         createdBy: "system",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
     ];
     
-    return NextResponse.json(mockData, { status: 200 });
+    return NextResponse.json(realCategories, { status: 200 });
   }
 } 

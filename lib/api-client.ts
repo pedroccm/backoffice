@@ -438,16 +438,20 @@ export async function createCurrency(currency: Omit<Currency, "id">): Promise<Cu
 }
 
 export async function getProductById(id: string): Promise<Product> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const product = products.find((product) => product.id === id)
-      if (product) {
-        resolve(product)
-      } else {
-        reject(new Error(`Product with id ${id} not found`))
-      }
-    }, 500)
-  })
+  try {
+    console.log(`[API-CLIENT] Buscando produto com ID: ${id} via API local`);
+    const response = await fetch(`/api/catalog/products/find/${id}`);
+    
+    if (!response.ok) {
+      throw new Error(`Erro ao buscar produto: ${response.status}`);
+    }
+    
+    const product = await response.json();
+    return product;
+  } catch (error) {
+    console.error(`[API-CLIENT] Erro ao buscar produto com ID ${id}:`, error);
+    throw new Error(`Product with id ${id} not found`);
+  }
 }
 
 export async function deleteProductDeliverable(productId: string, deliverableId: string): Promise<void> {
@@ -673,50 +677,122 @@ export async function updateCoupon(id: string, coupon: Partial<Coupon>): Promise
 }
 
 export async function updateProduct(id: string, product: Partial<Product>): Promise<Product> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      logDebug("Updating product with ID:", id)
-      logDebug("Update data:", product)
-
-      const productIndex = products.findIndex((p) => p.id === id)
-      if (productIndex !== -1) {
-        // Format prices if provided
-        let updatedPrices = products[productIndex].prices
-        if (product.prices) {
-          updatedPrices = product.prices.map((price) => ({
-            amount: Number(price.amount),
-            currencyId: price.currencyId,
-            modifierTypeId: price.modifierTypeId,
-          }))
+  try {
+    console.log(`[API-CLIENT] Atualizando produto com ID: ${id}`);
+    console.log('[API-CLIENT] Dados de atualização:', product);
+    
+    // Modo de desenvolvimento - apenas para debugging
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const forceMock = false; // Desativado - não permitir funcionários trabalharem com API indisponível
+    
+    if (isDevelopment && forceMock) {
+      console.log('[API-CLIENT] Usando modo de desenvolvimento com dados simulados');
+      
+      // Criar um mock do produto atualizado
+      const mockProduct: Product = {
+        id: id,
+        name: product.name || "Produto Atualizado",
+        description: product.description || "Descrição atualizada via modo de desenvolvimento",
+        productType: product.productType as "ONE_TIME" | "RECURRENT" || product.paymentType || "ONE_TIME",
+        paymentType: product.productType as "ONE_TIME" | "RECURRENT" || product.paymentType || "ONE_TIME",
+        status: product.status as string || "ACTIVE",
+        singleItemOnly: product.singleItemOnly !== undefined ? product.singleItemOnly : false,
+        categoryId: product.categoryId || "cat-1",
+        prices: product.prices || [{ amount: 299.90, currencyId: "curr-1", modifierTypeId: null }],
+        deliverables: [],
+        guidelines: [],
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log('[API-CLIENT] Produto mock criado:', mockProduct);
+      return mockProduct;
+    }
+    
+    // Fazer a requisição para a API local - usando o formato alternativo sem o ID na URL
+    const response = await fetch(`/api/catalog/products`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: id, // ID deve estar incluso no corpo da requisição
+        name: product.name,
+        description: product.description,
+        paymentType: product.productType || product.paymentType,
+        status: product.status,
+        singleItemOnly: product.singleItemOnly,
+        categoryId: product.categoryId,
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Erro desconhecido');
+      throw new Error(`Erro ao atualizar produto: ${response.status} - ${errorText}`);
+    }
+    
+    const updatedProduct = await response.json();
+    console.log('[API-CLIENT] Produto atualizado com sucesso:', updatedProduct);
+    
+    // Após atualizar os dados básicos, lidar com preços, entregáveis e diretrizes
+    let resultProduct = updatedProduct;
+    
+    // Atualizar preços se fornecidos
+    if (product.prices && product.prices.length > 0) {
+      console.log('[API-CLIENT] Atualizando preços do produto');
+      
+      // Para cada preço, atualizar ou adicionar conforme necessário
+      for (const price of product.prices) {
+        try {
+          if (price.id) {
+            // Atualizar preço existente
+            await fetch(`/api/catalog/products/prices`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                productId: id,
+                priceId: price.id,
+                amount: Number(price.amount),
+              }),
+            });
+          } else {
+            // Adicionar novo preço
+            await fetch(`/api/catalog/products/prices`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                productId: id,
+                currencyId: price.currencyId,
+                amount: Number(price.amount),
+                modifierTypeId: price.modifierTypeId,
+              }),
+            });
+          }
+        } catch (priceError) {
+          console.warn('[API-CLIENT] Erro ao atualizar preço:', priceError);
+          // Continuar com os próximos preços mesmo se este falhar
         }
-
-        // Handle deliverables if provided
-        if (product.deliverables) {
-          // Remove existing deliverables for this product
-          products[productIndex].deliverables = []
-
-          // Add the updated deliverables
-          products[productIndex].deliverables = product.deliverables.map((deliverable) => ({
-            ...deliverable,
-            productId: id,
-          }))
-        }
-
-        // Update other fields
-        products[productIndex] = {
-          ...products[productIndex],
-          ...product,
-          prices: updatedPrices,
-          updatedAt: new Date().toISOString(),
-        }
-
-        logDebug("Updated product:", products[productIndex])
-        resolve(products[productIndex])
-      } else {
-        reject(new Error(`Product with id ${id} not found`))
       }
-    }, 500)
-  })
+    }
+    
+    // Buscar o produto atualizado para retornar todos os dados atualizados
+    const finalResponse = await fetch(`/api/catalog/products/find/${id}`);
+    if (finalResponse.ok) {
+      resultProduct = await finalResponse.json();
+    }
+    
+    return resultProduct;
+  } catch (error) {
+    console.error(`[API-CLIENT] Erro ao atualizar produto ${id}:`, error);
+    
+    // Não permitir continuar se API externa não estiver disponível
+    throw new Error(`Não foi possível atualizar o produto. A API externa pode estar indisponível. Por favor, tente novamente mais tarde ou contate o suporte.`);
+  }
 }
 
 // Add these functions to the api-client.ts file
