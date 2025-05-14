@@ -7,15 +7,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, ListFilter, Filter } from "lucide-react"
+import { Plus, ListFilter, ArrowUpDown, ChevronUp, ChevronDown, Search, Filter } from "lucide-react"
 import { getProducts, getCategories } from "@/lib/catalog-api"
 import type { Product, Category } from "@/lib/catalog-api"
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+
+type SortOrder = "asc" | "desc" | "none";
 
 export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<SortOrder>("none")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -48,6 +63,45 @@ export default function CatalogPage() {
     router.push("/dashboard/products/new")
   }
 
+  const handleSortChange = (order: SortOrder) => {
+    setSortOrder(order);
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }
+
+  const handleCategoryChange = (categoryId: string | null) => {
+    setSelectedCategory(categoryId);
+  }
+
+  // Filtrar produtos com base no termo de busca e categoria selecionada
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = searchTerm 
+      ? product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getCategoryName(product.categoryId).toLowerCase().includes(searchTerm.toLowerCase())
+      : true;
+    
+    const matchesCategory = selectedCategory 
+      ? product.categoryId === selectedCategory 
+      : true;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  // Ordenar produtos com base na opção selecionada
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (sortOrder === "none") return 0;
+    if (sortOrder === "asc") return a.name.localeCompare(b.name);
+    return b.name.localeCompare(a.name);
+  });
+
+  const getSortIcon = () => {
+    if (sortOrder === "asc") return <ChevronUp className="h-4 w-4" />;
+    if (sortOrder === "desc") return <ChevronDown className="h-4 w-4" />;
+    return <ArrowUpDown className="h-4 w-4" />;
+  }
+
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
@@ -74,7 +128,82 @@ export default function CatalogPage() {
       ) : (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle>Todos os Produtos</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CardTitle>Todos os Produtos</CardTitle>
+                {selectedCategory && (
+                  <Badge variant="outline" className="ml-2">
+                    {getCategoryName(selectedCategory)}
+                    <button 
+                      className="ml-1 font-medium" 
+                      onClick={() => handleCategoryChange(null)}
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Buscar produtos..."
+                    className="pl-8 w-[250px]"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Categorias
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[200px]">
+                    <DropdownMenuLabel>Filtrar por categoria</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleCategoryChange(null)}>
+                      Todas as categorias
+                    </DropdownMenuItem>
+                    {categories.map((category) => (
+                      <DropdownMenuItem 
+                        key={category.id}
+                        onClick={() => handleCategoryChange(category.id)}
+                        className={selectedCategory === category.id ? "font-bold" : ""}
+                      >
+                        {category.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      {getSortIcon()}
+                      <span className="ml-2">Ordenar</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleSortChange("asc")}>
+                      <ChevronUp className="mr-2 h-4 w-4" />
+                      Ordem alfabética (A-Z)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSortChange("desc")}>
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                      Ordem alfabética inversa (Z-A)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSortChange("none")}>
+                      <ArrowUpDown className="mr-2 h-4 w-4" />
+                      Ordem padrão
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -89,14 +218,16 @@ export default function CatalogPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.length === 0 ? (
+                  {sortedProducts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-4">
-                        Nenhum produto encontrado
+                        {searchTerm || selectedCategory
+                          ? "Nenhum produto encontrado com os filtros selecionados" 
+                          : "Nenhum produto encontrado"}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    products.map((product) => (
+                    sortedProducts.map((product) => (
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell>{product.paymentType === "ONE_TIME" ? "Único" : "Recorrente"}</TableCell>
