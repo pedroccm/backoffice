@@ -1,30 +1,6 @@
 import type React from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
-import { Package, Tag, Ticket, FileText } from "lucide-react"
-
-const menuItems = [
-  {
-    title: "Produtos",
-    href: "/dashboard/products",
-    icon: Package,
-  },
-  {
-    title: "Ofertas",
-    href: "/dashboard/offers",
-    icon: FileText,
-  },
-  {
-    title: "Categorias",
-    href: "/dashboard/categories",
-    icon: Tag,
-  },
-  {
-    title: "Cupons",
-    href: "/dashboard/coupons",
-    icon: Ticket,
-  },
-]
 
 export default function DashboardLayout({
   children,

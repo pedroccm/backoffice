@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Package, ShoppingCart, FileText, Tag, Settings, LayoutDashboard, Ticket, DollarSign, ChevronDown, Download, CreditCard, Calculator, Clock, Plus } from "lucide-react"
+import { Package, ShoppingCart, FileText, Tag, Settings, LayoutDashboard, Ticket, DollarSign, ChevronDown, Download, CreditCard, Calculator, Clock, Plus, Users, ExternalLink } from "lucide-react"
 import { useSidebar } from "./sidebar-provider"
 import { useState } from "react"
 
@@ -14,6 +14,7 @@ export function Sidebar() {
   const { isOpen, close } = useSidebar()
   const [catalogoExpanded, setCatalogoExpanded] = useState(true)
   const [vendasExpanded, setVendasExpanded] = useState(true)
+  const [sessionsExpanded, setSessionsExpanded] = useState(true)
 
   return (
     <>
@@ -44,7 +45,7 @@ export function Sidebar() {
             </Link>
 
             {/* Microserviço: Catálogo */}
-            <div className="mt-4">
+            <div className="mt-2">
               <Button
                 variant="ghost"
                 className="w-full justify-between font-semibold"
@@ -120,6 +121,83 @@ export function Sidebar() {
                       Modificadores
                     </Button>
                   </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Microserviço: Vendas */}
+            <div className="mt-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-between font-semibold"
+                onClick={() => setVendasExpanded(!vendasExpanded)}
+              >
+                <span>Vendas</span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", vendasExpanded ? "rotate-180" : "")} />
+              </Button>
+              {vendasExpanded && (
+                <div className="ml-4 grid gap-1">
+                  {/* Sessions dentro de Vendas */}
+                  <div>
+                    <div className="flex items-center">
+                      <Link href="/dashboard/sessions" passHref legacyBehavior className="flex-grow">
+                        <Button
+                          variant={pathname.startsWith("/dashboard/sessions") ? "secondary" : "ghost"}
+                          className={cn(
+                            "justify-between w-full pr-1",
+                            pathname.startsWith("/dashboard/sessions") ? "sidebar-active" : "sidebar-item",
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <Users className="mr-2 h-4 w-4" />
+                            <span className="font-medium">Sessions</span>
+                          </div>
+                          <div className="flex items-center">
+                            <ExternalLink className="h-3 w-3 mr-1 text-muted-foreground" />
+                          </div>
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 p-0"
+                        onClick={() => setSessionsExpanded(!sessionsExpanded)}
+                      >
+                        <ChevronDown className={cn("h-4 w-4 transition-transform", sessionsExpanded ? "rotate-180" : "")} />
+                      </Button>
+                    </div>
+                    {sessionsExpanded && (
+                      <div className="ml-4 grid gap-1 mt-1">
+                        <Link href="/dashboard/offers" passHref legacyBehavior>
+                          <Button
+                            variant={pathname.startsWith("/dashboard/offers") ? "secondary" : "ghost"}
+                            className={cn(
+                              "justify-start",
+                              pathname.startsWith("/dashboard/offers") ? "sidebar-active" : "sidebar-item",
+                            )}
+                            onClick={close}
+                          >
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Ofertas
+                          </Button>
+                        </Link>
+                        <Link href="/dashboard/create-offer" passHref legacyBehavior>
+                          <Button
+                            variant={pathname.startsWith("/dashboard/create-offer") ? "secondary" : "ghost"}
+                            className={cn(
+                              "justify-start",
+                              pathname.startsWith("/dashboard/create-offer") ? "sidebar-active" : "sidebar-item",
+                            )}
+                            onClick={close}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Criar Oferta
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+
                   <Link href="/dashboard/payment-methods" passHref legacyBehavior>
                     <Button
                       variant={pathname.startsWith("/dashboard/payment-methods") ? "secondary" : "ghost"}
@@ -159,48 +237,6 @@ export function Sidebar() {
                       Duração de Ofertas
                     </Button>
                   </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Microserviço: Vendas */}
-            <div className="mt-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-between font-semibold"
-                onClick={() => setVendasExpanded(!vendasExpanded)}
-              >
-                <span>Vendas</span>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", vendasExpanded ? "rotate-180" : "")} />
-              </Button>
-              {vendasExpanded && (
-                <div className="ml-4 grid gap-1">
-                  <Link href="/dashboard/offers" passHref legacyBehavior>
-                    <Button
-                      variant={pathname.startsWith("/dashboard/offers") ? "secondary" : "ghost"}
-                      className={cn(
-                        "justify-start",
-                        pathname.startsWith("/dashboard/offers") ? "sidebar-active" : "sidebar-item",
-                      )}
-                      onClick={close}
-                    >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Ofertas
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/create-offer" passHref legacyBehavior>
-                    <Button
-                      variant={pathname.startsWith("/dashboard/create-offer") ? "secondary" : "ghost"}
-                      className={cn(
-                        "justify-start",
-                        pathname.startsWith("/dashboard/create-offer") ? "sidebar-active" : "sidebar-item",
-                      )}
-                      onClick={close}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Criar Oferta
-                    </Button>
-                  </Link>
                   <Link href="/dashboard/coupons" passHref legacyBehavior>
                     <Button
                       variant={pathname.startsWith("/dashboard/coupons") ? "secondary" : "ghost"}
@@ -212,19 +248,6 @@ export function Sidebar() {
                     >
                       <Ticket className="mr-2 h-4 w-4" />
                       Cupons
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/sessions" passHref legacyBehavior>
-                    <Button
-                      variant={pathname.startsWith("/dashboard/sessions") ? "secondary" : "ghost"}
-                      className={cn(
-                        "justify-start",
-                        pathname.startsWith("/dashboard/sessions") ? "sidebar-active" : "sidebar-item",
-                      )}
-                      onClick={close}
-                    >
-                      <Ticket className="mr-2 h-4 w-4" />
-                      Sessions
                     </Button>
                   </Link>
                 </div>

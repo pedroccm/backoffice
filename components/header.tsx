@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import Link from "next/link"
 
 export function Header() {
   const { toggle } = useSidebar()
@@ -23,7 +24,9 @@ export function Header() {
         <span className="sr-only">Toggle Menu</span>
       </Button>
       <div className="flex-1">
-        <h1 className="text-xl font-semibold text-primary-700 hidden md:block">Backoffice de Produtos</h1>
+        <Link href="/dashboard">
+          <h1 className="text-xl font-semibold text-primary-700 hidden md:block hover:text-primary-800 transition-colors">Backoffice de Produtos</h1>
+        </Link>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
