@@ -1,80 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SALES_API_URL } from '@/lib/api-fetch';
+import { getOffer, saveOffer } from '@/lib/offer-storage';
 
-// GET - obter uma oferta específica
+// GET - obter detalhes de uma oferta específica
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { id } = params;
+  
+  console.log(`Buscando detalhes da oferta ${id}`);
+  
   try {
-    const id = params.id;
-    
-    console.log(`Fazendo requisição para ${SALES_API_URL}/offers/${id}`);
+    // Verificar cache local em ambiente de desenvolvimento
+    const cachedOffer = getOffer(id);
+    if (cachedOffer) {
+      console.log(`Encontrada oferta ${id} em cache`);
+      return NextResponse.json(cachedOffer);
+    }
     
     // Fazer a requisição para a API externa
-    const apiResponse = await fetch(`${SALES_API_URL}/offers/${id}`, {
-      method: 'GET',
+    const response = await fetch(`${SALES_API_URL}/offers/${id}`, {
       headers: {
         'Content-Type': 'application/json',
         ...(request.headers.get('Authorization') 
           ? { 'Authorization': request.headers.get('Authorization') || '' } 
           : {}),
-      },
+      }
     });
     
-    console.log(`Resposta da API: status ${apiResponse.status}`);
-    
-    // Se a resposta não for bem-sucedida, trate o erro
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text().catch(() => '');
-      console.error(`Erro na API externa: ${errorText}`);
+    // Se a resposta for bem-sucedida, retornar os dados da API
+    if (response.ok) {
+      const offerData = await response.json();
       
-      // Em desenvolvimento, simule uma resposta
-      if (process.env.NODE_ENV === 'development') {
-        // Dados simulados para desenvolvimento
-        const mockOffer = {
-          id: id,
-          items: [],
-          leadId: id.includes('one-time') ? 'lead-123' : 'lead-456',
-          subtotal: 0,
-          total: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        
-        return NextResponse.json(mockOffer);
+      // Garantir que os dados da oferta têm todos os campos necessários
+      if (!offerData.offerItems) {
+        offerData.offerItems = [];
       }
       
-      return NextResponse.json(
-        { error: `Falha ao obter oferta: ${apiResponse.status}` }, 
-        { status: apiResponse.status }
-      );
-    }
+      // Atualizar o cache 
+      saveOffer(id, offerData);
+      
+      return NextResponse.json(offerData);
+    } 
     
-    // Retorne a resposta da API
-    const data = await apiResponse.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Erro ao processar a requisição:', error);
-    
-    // Em desenvolvimento, retorne dados simulados
+    // Em ambiente de desenvolvimento, criar uma oferta simulada se não existir
     if (process.env.NODE_ENV === 'development') {
-      // Dados simulados para desenvolvimento
+      console.log(`API externa retornou erro ${response.status}. Criando oferta simulada para ${id}`);
+      
+      // Criar uma nova oferta simulada
       const mockOffer = {
-        id: params.id,
-        items: [],
-        leadId: params.id.includes('one-time') ? 'lead-123' : 'lead-456',
-        subtotal: 0,
-        total: 0,
+        id: id,
+        leadId: "lead-123",
+        leadName: "Cliente Simulado",
+        couponId: null,
+        couponDiscountPercentage: null,
+        couponDiscountTotal: null,
+        installmentId: null,
+        installmentMonths: null,
+        installmentDiscountPercentage: null,
+        installmentDiscountTotal: null,
+        offerDurationId: null,
+        offerDurationMonths: null,
+        offerDurationDiscountPercentage: null,
+        offerDurationDiscountTotal: null,
+        projectStartDate: null,
+        paymentStartDate: null,
+        payDay: null,
+        status: "PENDING",
+        type: "ONE_TIME",
+        subtotalPrice: 0,
+        totalPrice: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        offerItems: []
       };
+      
+      // Salvar em cache
+      saveOffer(id, mockOffer);
+      
+      return NextResponse.json(mockOffer);
+    }
+    
+    // Em produção, retornar o erro
+    const errorText = await response.text().catch(() => '');
+    return NextResponse.json(
+      { error: `Oferta não encontrada: ${response.status}`, details: errorText },
+      { status: response.status }
+    );
+    
+  } catch (error) {
+    console.error(`Erro ao buscar oferta ${id}:`, error);
+    
+    // Em desenvolvimento, retornar uma oferta simulada
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Erro ao processar requisição. Criando oferta simulada para ${id}`);
+      
+      const mockOffer = {
+        id: id,
+        leadId: "lead-123",
+        leadName: "Cliente Simulado",
+        status: "PENDING",
+        type: "ONE_TIME",
+        subtotalPrice: 0,
+        totalPrice: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        offerItems: []
+      };
+      
+      // Salvar em cache
+      saveOffer(id, mockOffer);
       
       return NextResponse.json(mockOffer);
     }
     
     return NextResponse.json(
-      { error: 'Erro interno do servidor' }, 
+      { error: 'Erro interno do servidor', details: String(error) },
       { status: 500 }
     );
   }

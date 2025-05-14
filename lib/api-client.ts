@@ -1,4 +1,5 @@
 import { PaymentMethod } from "@/lib/api-fetch";
+import { getOffer, saveOffer, removeOffer } from "@/lib/offer-storage";
 
 // Debugging helper
 function logDebug(message: string, data?: any) {
@@ -25,7 +26,13 @@ export type Product = {
   status?: string
   singleItemOnly?: boolean
   categoryId?: string
-  prices: { amount: number; currencyId: string; modifierTypeId?: string | null }[]
+  prices: { 
+    id?: string;
+    priceId?: string;
+    amount: number; 
+    currencyId: string; 
+    modifierTypeId?: string | null 
+  }[]
   deliverables?: Deliverable[]
   guidelines?: Guideline[]
   createdBy?: string
@@ -891,61 +898,63 @@ export async function getProductOffers(productId: string): Promise<Offer[]> {
 
 export async function getOfferById(id: string): Promise<Offer> {
   try {
-    logDebug(`Buscando oferta ${id}`)
+    // Fazer a requisição para a API seguindo o documento
+    const response = await fetch(`/api/sales/offers/${id}`);
     
-    // Acessar a API local
-    const response = await fetch(`/api/sales/offers/${id}`)
     if (!response.ok) {
-      throw new Error(`Erro ao buscar oferta: ${response.status}`)
+      throw new Error(`Falha ao buscar oferta: ${response.status}`);
     }
     
-    const offer = await response.json()
+    const offerData = await response.json();
+    console.log(`[API Client] Oferta ${id} recebida da API:`, offerData);
     
-    // Transformar para o formato usado pelo cliente
-    return {
-      id: offer.id,
-      leadId: offer.leadId,
-      leadName: offer.leadName || "Cliente",
-      status: offer.status,
-      type: offer.type,
-      subtotal: offer.subtotalPrice,
-      total: offer.totalPrice,
-      items: offer.offerItems.map((item: any) => ({
+    // Verificar se os itens estão disponíveis
+    if (!offerData.offerItems || !Array.isArray(offerData.offerItems)) {
+      console.log('[API Client] Aviso: Oferta não possui itens.');
+    }
+    
+    // Construir objeto padrão com os dados da API
+    const offer: Offer = {
+      id: offerData.id,
+      leadId: offerData.leadId || "",
+      leadName: offerData.leadName,
+      status: offerData.status,
+      type: offerData.type,
+      subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
+      total: offerData.totalPrice || offerData.total || 0,
+      items: offerData.offerItems?.map(item => ({
         id: item.id,
-        offerId: item.offerId,
         productId: item.productId,
         priceId: item.priceId,
-        productType: item.productType,
         price: item.price,
         quantity: item.quantity,
         totalPrice: item.totalPrice
-      })),
-      couponId: offer.couponId,
-      couponDiscountPercentage: offer.couponDiscountPercentage,
-      couponDiscountTotal: offer.couponDiscountTotal,
-      installmentId: offer.installmentId,
-      installmentMonths: offer.installmentMonths,
-      installmentDiscountPercentage: offer.installmentDiscountPercentage,
-      installmentDiscountTotal: offer.installmentDiscountTotal,
-      offerDurationId: offer.offerDurationId,
-      offerDurationMonths: offer.offerDurationMonths,
-      offerDurationDiscountPercentage: offer.offerDurationDiscountPercentage,
-      offerDurationDiscountTotal: offer.offerDurationDiscountTotal,
-      projectStartDate: offer.projectStartDate,
-      paymentStartDate: offer.paymentStartDate,
-      payDay: offer.payDay,
-      createdAt: offer.createdAt,
-      updatedAt: offer.updatedAt
-    }
-  } catch (error) {
-    logDebug(`Erro ao buscar oferta ${id}:`, error)
+      })) || [],
+      couponId: offerData.couponId,
+      couponDiscountPercentage: offerData.couponDiscountPercentage,
+      couponDiscountTotal: offerData.couponDiscountTotal,
+      installmentId: offerData.installmentId,
+      installmentMonths: offerData.installmentMonths,
+      installmentDiscountPercentage: offerData.installmentDiscountPercentage,
+      installmentDiscountTotal: offerData.installmentDiscountTotal,
+      offerDurationId: offerData.offerDurationId,
+      offerDurationMonths: offerData.offerDurationMonths,
+      offerDurationDiscountPercentage: offerData.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offerData.offerDurationDiscountTotal,
+      projectStartDate: offerData.projectStartDate,
+      paymentStartDate: offerData.paymentStartDate,
+      payDay: offerData.payDay,
+      createdAt: offerData.createdAt,
+      updatedAt: offerData.updatedAt
+    };
     
-    // Buscar na lista em memória como fallback
-    const offer = offers.find((o) => o.id === id)
-    if (!offer) {
-      throw new Error(`Oferta ${id} não encontrada`)
-    }
-    return offer
+    // Salvar em cache para referência futura
+    saveOffer(id, offerData);
+    
+    return offer;
+  } catch (error) {
+    console.error(`[API Client] Erro ao buscar oferta ${id}:`, error);
+    throw error;
   }
 }
 
@@ -961,7 +970,7 @@ export async function verifyProductInOffer(offerId: string, productId?: string):
   logDebug(`Verificando se produto ${productId || 'qualquer'} existe na oferta ${offerId}`);
   
   try {
-    // Primeiro, tentar obter os dados diretamente da API de ofertas
+    // Obter os dados da oferta diretamente da API
     const response = await fetch(`/api/sales/offers/${offerId}`, {
       method: "GET",
       headers: {
@@ -969,58 +978,46 @@ export async function verifyProductInOffer(offerId: string, productId?: string):
       }
     });
     
-    if (response.ok) {
-      const offerData = await response.json();
-      logDebug(`Obtidos dados diretos da oferta ${offerId}`, offerData);
-      
-      // Se a oferta não tem itens ou offerItems não é um array
-      if (!offerData.offerItems || !Array.isArray(offerData.offerItems) || offerData.offerItems.length === 0) {
-        return {
-          exists: false,
-          message: 'A oferta não possui nenhum item',
-          offerDetails: {
-            id: offerData.id,
-            status: offerData.status,
-            type: offerData.type,
-            subtotalPrice: offerData.subtotalPrice || 0,
-            totalPrice: offerData.totalPrice || 0,
-            itemCount: 0
-          }
-        };
-      }
-      
-      // Se estamos verificando um produto específico
-      if (productId) {
-        const matchingItems = offerData.offerItems.filter((item: any) => 
-          item.productId === productId
-        );
-        
-        const exists = matchingItems.length > 0;
-        const isDuplicated = matchingItems.length > 1;
-        
-        return {
-          exists,
-          isDuplicated,
-          duplicateCount: matchingItems.length,
-          message: exists 
-            ? `Produto ${productId} encontrado na oferta ${offerId}`
-            : `Produto ${productId} não encontrado na oferta ${offerId}`,
-          offerDetails: {
-            id: offerData.id,
-            status: offerData.status,
-            type: offerData.type,
-            subtotalPrice: offerData.subtotalPrice || 0,
-            totalPrice: offerData.totalPrice || 0,
-            itemCount: offerData.offerItems.length
-          },
-          items: matchingItems
-        };
-      }
-      
-      // Retornar informações sobre todos os itens
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Erro ao buscar oferta: ${response.status} - ${errorText}`);
+    }
+    
+    const offerData = await response.json();
+    logDebug(`Obtidos dados diretos da oferta ${offerId}`, offerData);
+    
+    // Se a oferta não tem itens ou offerItems não é um array
+    if (!offerData.offerItems || !Array.isArray(offerData.offerItems) || offerData.offerItems.length === 0) {
       return {
-        exists: true,
-        message: `Oferta ${offerId} possui ${offerData.offerItems.length} item(s)`,
+        exists: false,
+        message: 'A oferta não possui nenhum item',
+        offerDetails: {
+          id: offerData.id,
+          status: offerData.status,
+          type: offerData.type,
+          subtotalPrice: offerData.subtotalPrice || 0,
+          totalPrice: offerData.totalPrice || 0,
+          itemCount: 0
+        }
+      };
+    }
+    
+    // Se estamos verificando um produto específico
+    if (productId) {
+      const matchingItems = offerData.offerItems.filter((item: any) => 
+        item.productId === productId
+      );
+      
+      const exists = matchingItems.length > 0;
+      const isDuplicated = matchingItems.length > 1;
+      
+      return {
+        exists,
+        isDuplicated,
+        duplicateCount: matchingItems.length,
+        message: exists 
+          ? `Produto ${productId} encontrado na oferta ${offerId}`
+          : `Produto ${productId} não encontrado na oferta ${offerId}`,
         offerDetails: {
           id: offerData.id,
           status: offerData.status,
@@ -1029,38 +1026,27 @@ export async function verifyProductInOffer(offerId: string, productId?: string):
           totalPrice: offerData.totalPrice || 0,
           itemCount: offerData.offerItems.length
         },
-        items: offerData.offerItems
+        items: matchingItems
       };
     }
     
-    // Se não conseguir acessar diretamente, usar o endpoint de verificação
-    const verifyResponse = await fetch("/api/sales/offers/verify-item", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // Retornar informações sobre todos os itens
+    return {
+      exists: true,
+      message: `Oferta ${offerId} possui ${offerData.offerItems.length} item(s)`,
+      offerDetails: {
+        id: offerData.id,
+        status: offerData.status,
+        type: offerData.type,
+        subtotalPrice: offerData.subtotalPrice || 0,
+        totalPrice: offerData.totalPrice || 0,
+        itemCount: offerData.offerItems.length
       },
-      body: JSON.stringify({
-        offerId,
-        productId
-      }),
-    });
-    
-    if (!verifyResponse.ok) {
-      const errorText = await verifyResponse.text().catch(() => '');
-      throw new Error(`Erro ao verificar produto na oferta: ${verifyResponse.status} - ${errorText}`);
-    }
-    
-    // Retornar os dados da verificação
-    const result = await verifyResponse.json();
-    logDebug(`Resultado da verificação:`, result);
-    
-    return result;
+      items: offerData.offerItems
+    };
   } catch (error) {
     logDebug(`Erro ao verificar produto na oferta:`, error);
-    return {
-      exists: false,
-      message: `Erro ao verificar: ${error instanceof Error ? error.message : String(error)}`
-    };
+    throw error;
   }
 }
 
@@ -1071,7 +1057,13 @@ export async function addProductToOffer(
   priceId: string,
   quantity: number
 ): Promise<Offer> {
-  logDebug(`Adicionando produto ${productId} à oferta ${offerId}`);
+  console.log("==============================");
+  console.log("INICIANDO ADIÇÃO DE PRODUTO À OFERTA");
+  console.log("==============================");
+  console.log("offerId:", offerId);
+  console.log("productId:", productId);
+  console.log("priceId:", priceId);
+  console.log("quantity:", quantity);
   
   try {
     // Verificar se o produto já existe na oferta
@@ -1079,97 +1071,88 @@ export async function addProductToOffer(
     
     // Se o produto já existir, apenas retornar a oferta atual
     if (verificationResult.exists) {
-      logDebug(`Produto ${productId} já existe na oferta ${offerId}. Ignorando duplicação.`);
+      console.log("Produto já existe na oferta. Ignorando duplicação.");
       
       // Verificar se o item está duplicado e alertar
       if (verificationResult.isDuplicated) {
-        console.warn(`ALERTA: Produto ${productId} está duplicado ${verificationResult.duplicateCount} vezes na oferta ${offerId}`);
+        console.warn(`ALERTA: Produto está duplicado ${verificationResult.duplicateCount} vezes na oferta`);
       }
       
       // Buscar oferta completa
       return await getOfferById(offerId);
     }
     
-    // Usar a rota documentada em doc.txt
+    // Preparar o corpo da requisição
+    const requestBody = {
+      offerId,
+      productId,
+      priceId,
+      quantity: Number(quantity) || 1
+    };
+    
+    // Log detalhado do corpo da requisição
+    console.log('API request body:');
+    console.log(requestBody);
+    
+    // Usar a rota documentada em doc.txt: /offers/items (POST)
     const response = await fetch("/api/sales/offers/items", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        offerId,
-        productId,
-        priceId,
-        quantity: Number(quantity) || 1
-      }),
+      body: JSON.stringify(requestBody),
     });
+    
+    // Log da resposta HTTP
+    console.log('API response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
+      console.error('Erro na resposta da API:', errorText);
       throw new Error(`Erro ao adicionar produto: ${response.status} - ${errorText}`);
     }
     
-    logDebug(`Produto adicionado com sucesso à API`);
-    
     // Obter a resposta completa da API
     const apiResponse = await response.json();
-    logDebug("Resposta completa da API após adicionar item:", apiResponse);
+    console.log("[API Client] Produto adicionado com sucesso à API");
+    console.log("[API Client] Resposta completa da API após adicionar item:", apiResponse);
+    
+    // Verificar se a resposta possui offerItems
+    if (!apiResponse.offerItems || !Array.isArray(apiResponse.offerItems)) {
+      console.log("ALERTA: A resposta da API não contém array offerItems!");
+    }
     
     // Verificar a estrutura da resposta
     if (!apiResponse || !apiResponse.id) {
       throw new Error("Resposta da API inválida ao adicionar produto");
     }
     
-    // Buscar a oferta atualizada diretamente para garantir que temos os dados mais recentes
-    const updatedOffer = await getOfferById(offerId);
+    // Formatar a resposta para garantir que temos o formato correto para o cliente
+    const standardizedResponse: Offer = {
+      id: apiResponse.id,
+      leadId: apiResponse.leadId || "",
+      status: apiResponse.status,
+      type: apiResponse.type,
+      subtotal: apiResponse.subtotalPrice || apiResponse.subtotal || 0,
+      total: apiResponse.totalPrice || apiResponse.total || 0,
+      items: apiResponse.offerItems?.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        priceId: item.priceId,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice
+      })) || [],
+      createdAt: apiResponse.createdAt,
+      updatedAt: apiResponse.updatedAt
+    };
     
-    // Verificar se o produto está na oferta retornada
-    const productAdded = updatedOffer.items.some(item => item.productId === productId);
+    // Salvar a resposta real em cache
+    saveOffer(offerId, apiResponse);
     
-    if (!productAdded) {
-      logDebug(`Produto ${productId} não encontrado na oferta atualizada. Realizando verificação adicional...`);
-      
-      // Esperar um momento para garantir que a API processou a adição
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Verificar novamente
-      const finalCheck = await getOfferById(offerId);
-      const finalCheckProductExists = finalCheck.items.some(item => item.productId === productId);
-      
-      if (finalCheckProductExists) {
-        logDebug(`Produto ${productId} encontrado na verificação final`);
-        return finalCheck;
-      }
-      
-      // Se ainda não encontrou, tentar adicionar novamente
-      logDebug(`Produto ${productId} não encontrado, tentando adicionar novamente...`);
-      
-      const retryResponse = await fetch("/api/sales/offers/items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          offerId,
-          productId,
-          priceId,
-          quantity: Number(quantity) || 1
-        }),
-      });
-      
-      if (!retryResponse.ok) {
-        const errorText = await retryResponse.text().catch(() => '');
-        throw new Error(`Erro na segunda tentativa: ${retryResponse.status} - ${errorText}`);
-      }
-      
-      // Buscar a oferta atualizada após a segunda tentativa
-      const afterRetryOffer = await getOfferById(offerId);
-      return afterRetryOffer;
-    }
-    
-    return updatedOffer;
+    return standardizedResponse;
   } catch (error) {
-    logDebug(`Erro ao adicionar produto à oferta:`, error);
+    console.error("[API Client] Erro ao adicionar produto à oferta:", error);
     throw error;
   }
 }
@@ -1554,3 +1537,159 @@ export async function createSession(data: { name: string; salesforceLeadId: stri
 }
 
 export type { Category, Currency, Deliverable, Guideline, ModifierType, Coupon, PaymentMethod }
+
+// Função para aplicar parcelamento à oferta
+export async function applyInstallment(data: {
+  offerId: string,
+  installmentId: string
+}): Promise<Offer> {
+  try {
+    console.log("Aplicando parcelamento à oferta:", data);
+    
+    // Usar a rota documentada em doc.txt: POST /offers/installment
+    const response = await fetch("/api/sales/offers/installment", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Erro ao aplicar parcelamento: ${response.status} - ${errorText}`);
+    }
+    
+    const offerData = await response.json();
+    console.log("Parcelamento aplicado com sucesso:", offerData);
+    
+    // Salvar em cache
+    saveOffer(data.offerId, offerData);
+    
+    // Formatar resposta para o frontend
+    const offer: Offer = {
+      id: offerData.id,
+      leadId: offerData.leadId || "",
+      status: offerData.status,
+      type: offerData.type,
+      subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
+      total: offerData.totalPrice || offerData.total || 0,
+      items: offerData.offerItems?.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        priceId: item.priceId,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice
+      })) || [],
+      couponId: offerData.couponId,
+      couponDiscountPercentage: offerData.couponDiscountPercentage,
+      couponDiscountTotal: offerData.couponDiscountTotal,
+      installmentId: offerData.installmentId,
+      installmentMonths: offerData.installmentMonths,
+      installmentDiscountPercentage: offerData.installmentDiscountPercentage,
+      installmentDiscountTotal: offerData.installmentDiscountTotal,
+      offerDurationId: offerData.offerDurationId,
+      offerDurationMonths: offerData.offerDurationMonths,
+      offerDurationDiscountPercentage: offerData.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offerData.offerDurationDiscountTotal,
+      projectStartDate: offerData.projectStartDate,
+      paymentStartDate: offerData.paymentStartDate,
+      payDay: offerData.payDay,
+      createdAt: offerData.createdAt,
+      updatedAt: offerData.updatedAt
+    };
+    
+    return offer;
+  } catch (error) {
+    console.error("Erro ao aplicar parcelamento:", error);
+    throw error;
+  }
+}
+
+// Função para aplicar duração à oferta
+export async function applyOfferDuration(data: {
+  offerId: string,
+  offerDurationId: string
+}): Promise<Offer> {
+  try {
+    console.log("Aplicando duração à oferta:", data);
+    
+    // Usar a rota documentada em doc.txt: POST /offers/offer-duration
+    const response = await fetch("/api/sales/offers/offer-duration", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Erro ao aplicar duração: ${response.status} - ${errorText}`);
+    }
+    
+    const offerData = await response.json();
+    console.log("Duração aplicada com sucesso:", offerData);
+    
+    // Salvar em cache
+    saveOffer(data.offerId, offerData);
+    
+    // Formatar resposta para o frontend
+    const offer: Offer = {
+      id: offerData.id,
+      leadId: offerData.leadId || "",
+      status: offerData.status,
+      type: offerData.type,
+      subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
+      total: offerData.totalPrice || offerData.total || 0,
+      items: offerData.offerItems?.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        priceId: item.priceId,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice
+      })) || [],
+      couponId: offerData.couponId,
+      couponDiscountPercentage: offerData.couponDiscountPercentage,
+      couponDiscountTotal: offerData.couponDiscountTotal,
+      installmentId: offerData.installmentId,
+      installmentMonths: offerData.installmentMonths,
+      installmentDiscountPercentage: offerData.installmentDiscountPercentage,
+      installmentDiscountTotal: offerData.installmentDiscountTotal,
+      offerDurationId: offerData.offerDurationId,
+      offerDurationMonths: offerData.offerDurationMonths,
+      offerDurationDiscountPercentage: offerData.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offerData.offerDurationDiscountTotal,
+      projectStartDate: offerData.projectStartDate,
+      paymentStartDate: offerData.paymentStartDate,
+      payDay: offerData.payDay,
+      createdAt: offerData.createdAt,
+      updatedAt: offerData.updatedAt
+    };
+    
+    return offer;
+  } catch (error) {
+    console.error("Erro ao aplicar duração:", error);
+    throw error;
+  }
+}
+
+export async function getSessionById(sessionId: string): Promise<Session> {
+  try {
+    console.log(`Buscando sessão: ${sessionId}`);
+    
+    const response = await fetch(`/api/sales/sessions/${sessionId}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Falha ao buscar sessão: ${response.status} ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao buscar sessão ${sessionId}:`, error);
+    throw error;
+  }
+}

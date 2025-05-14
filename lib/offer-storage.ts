@@ -42,6 +42,9 @@ function getStorage() {
 export function saveOffer(offerId: string, offerData: any): void {
   const cacheKey = `offer_${offerId}`;
   
+  console.log(`[Offer Storage] Salvando oferta ${offerId} no cache:`, offerData);
+  console.log('[Offer Storage] Items na oferta:', offerData.offerItems || offerData.items || 'Nenhum item');
+  
   // Salvar no storage do navegador se disponível
   const storage = getStorage();
   if (storage) {
@@ -62,6 +65,7 @@ export function saveOffer(offerId: string, offerData: any): void {
  */
 export function getOffer(offerId: string): any | null {
   const cacheKey = `offer_${offerId}`;
+  let result = null;
   
   // Tentar recuperar do storage do navegador
   const storage = getStorage();
@@ -69,7 +73,7 @@ export function getOffer(offerId: string): any | null {
     try {
       const data = storage.getItem(cacheKey);
       if (data) {
-        return JSON.parse(data);
+        result = JSON.parse(data);
       }
     } catch (e) {
       console.log('Erro ao recuperar do storage:', e);
@@ -77,11 +81,18 @@ export function getOffer(offerId: string): any | null {
   }
   
   // Caso contrário, tentar recuperar da memória
-  if (offerMemoryCache.has(cacheKey)) {
-    return offerMemoryCache.get(cacheKey);
+  if (!result && offerMemoryCache.has(cacheKey)) {
+    result = offerMemoryCache.get(cacheKey);
   }
   
-  return null;
+  if (result) {
+    console.log(`[Offer Storage] Recuperando oferta ${offerId} do cache:`, result);
+    console.log('[Offer Storage] Items na oferta recuperada:', result.offerItems || result.items || 'Nenhum item');
+  } else {
+    console.log(`[Offer Storage] Oferta ${offerId} não encontrada no cache`);
+  }
+  
+  return result;
 }
 
 /**

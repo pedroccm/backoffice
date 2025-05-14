@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Edit, Trash2 } from "lucide-react"
-import { getAllPaymentMethods, deletePaymentMethod, type PaymentMethod } from "@/lib/api-client"
+import { Plus, Search } from "lucide-react"
+import { getAllPaymentMethods, type PaymentMethod } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function PaymentMethodsPage() {
@@ -42,25 +42,6 @@ export default function PaymentMethodsPage() {
       method.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       method.code.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Tem certeza que deseja excluir este método de pagamento?")) {
-      try {
-        await deletePaymentMethod(id)
-        setPaymentMethods(paymentMethods.filter((method) => method.id !== id))
-        toast({
-          title: "Sucesso",
-          description: "Método de pagamento excluído com sucesso.",
-        })
-      } catch (error) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir o método de pagamento.",
-          variant: "destructive",
-        })
-      }
-    }
-  }
 
   return (
     <div className="grid gap-6">
@@ -102,13 +83,12 @@ export default function PaymentMethodsPage() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Código</TableHead>
                     <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPaymentMethods.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                         Nenhum método de pagamento encontrado.
                       </TableCell>
                     </TableRow>
@@ -118,20 +98,6 @@ export default function PaymentMethodsPage() {
                         <TableCell className="font-medium">{method.name}</TableCell>
                         <TableCell>{method.code}</TableCell>
                         <TableCell>{method.description}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.push(`/dashboard/payment-methods/${method.id}`)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(method.id)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir</span>
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

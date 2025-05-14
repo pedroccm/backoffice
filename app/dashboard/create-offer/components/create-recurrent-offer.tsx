@@ -45,13 +45,19 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
   const [selectedProductDetails, setSelectedProductDetails] = useState<Product | null>(null)
   const [selectedPrice, setSelectedPrice] = useState<string>("")
   const [quantity, setQuantity] = useState<number>(1)
-  const [loading, setLoading] = useState(false)
+  
+  // Separar os estados de loading para cada operação
+  const [addingProduct, setAddingProduct] = useState(false)
+  const [applyingInstallment, setApplyingInstallment] = useState(false)
+  const [applyingDuration, setApplyingDuration] = useState(false)
   
   const [installments, setInstallments] = useState<Installment[]>([])
   const [selectedInstallment, setSelectedInstallment] = useState<string>("")
+  const [installmentApplied, setInstallmentApplied] = useState(false)
   
   const [offerDurations, setOfferDurations] = useState<OfferDuration[]>([])
   const [selectedOfferDuration, setSelectedOfferDuration] = useState<string>("")
+  const [offerDurationApplied, setOfferDurationApplied] = useState(false)
   
   const [offer, setOffer] = useState<Offer | null>(null)
   
@@ -61,7 +67,12 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       try {
         // Carregar produtos (apenas recorrentes)
         const productsData = await getProducts()
-        const recurrentProducts = productsData.filter(p => p.paymentType === "RECURRENT")
+        const recurrentProducts = productsData
+          .filter(p => p.paymentType === "RECURRENT")
+          // Filtrar apenas produtos que tenham pelo menos um preço definido
+          .filter(p => p.prices && Array.isArray(p.prices) && p.prices.length > 0)
+        
+        console.log(`Produtos recorrentes com preço: ${recurrentProducts.length} de ${productsData.filter(p => p.paymentType === "RECURRENT").length} produtos recorrentes disponíveis`);
         setProducts(recurrentProducts)
         
         // Carregar parcelamentos
@@ -74,7 +85,20 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
         
         // Carregar os detalhes da oferta atual
         const offerData = await getOfferById(offerId)
+        console.log("Oferta recorrente carregada:", offerData);
+        console.log("Itens na oferta recorrente:", offerData.items ? offerData.items.length : 0);
         setOffer(offerData)
+        
+        // Verificar se já existem parcelamentos ou durações aplicados
+        if (offerData.installmentId) {
+          setSelectedInstallment(offerData.installmentId)
+          setInstallmentApplied(true)
+        }
+        
+        if (offerData.offerDurationId) {
+          setSelectedOfferDuration(offerData.offerDurationId)
+          setOfferDurationApplied(true)
+        }
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error)
         toast({
@@ -110,7 +134,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       return
     }
     
-    setLoading(true)
+    setAddingProduct(true)
     
     try {
       const updatedOffer = await addProductToOffer(
@@ -145,7 +169,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
         variant: "destructive"
       })
     } finally {
-      setLoading(false)
+      setAddingProduct(false)
     }
   }
   
@@ -160,7 +184,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       return
     }
     
-    setLoading(true)
+    setApplyingInstallment(true)
     
     try {
       const updatedOffer = await applyInstallment({
@@ -169,6 +193,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       })
       
       setOffer(updatedOffer)
+      setInstallmentApplied(true)
       
       toast({
         title: "Parcelamento aplicado",
@@ -182,7 +207,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
         variant: "destructive"
       })
     } finally {
-      setLoading(false)
+      setApplyingInstallment(false)
     }
   }
   
@@ -197,7 +222,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       return
     }
     
-    setLoading(true)
+    setApplyingDuration(true)
     
     try {
       const updatedOffer = await applyOfferDuration({
@@ -206,6 +231,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       })
       
       setOffer(updatedOffer)
+      setOfferDurationApplied(true)
       
       toast({
         title: "Duração aplicada",
@@ -219,7 +245,29 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
         variant: "destructive"
       })
     } finally {
-      setLoading(false)
+      setApplyingDuration(false)
+    }
+  }
+
+  // Função para permitir alterar o parcelamento aplicado
+  const handleChangeInstallment = async () => {
+    // Se já temos um novo parcelamento selecionado, aplicamos ele imediatamente
+    if (selectedInstallment && installmentApplied) {
+      await handleApplyInstallment();
+    } else {
+      // Caso contrário, apenas limpamos a seleção anterior para permitir nova seleção
+      setInstallmentApplied(false);
+    }
+  }
+  
+  // Função para permitir alterar a duração aplicada
+  const handleChangeOfferDuration = async () => {
+    // Se já temos uma nova duração selecionada, aplicamos ela imediatamente
+    if (selectedOfferDuration && offerDurationApplied) {
+      await handleApplyOfferDuration();
+    } else {
+      // Caso contrário, apenas limpamos a seleção anterior para permitir nova seleção
+      setOfferDurationApplied(false);
     }
   }
   
@@ -273,7 +321,7 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
                 </SelectTrigger>
                 <SelectContent>
                   {products.length === 0 ? (
-                    <SelectItem value="empty" disabled>Nenhum produto disponível</SelectItem>
+                    <SelectItem value="empty" disabled>Nenhum produto recorrente com preço disponível</SelectItem>
                   ) : (
                     products.map(product => (
                       <SelectItem key={product.id} value={product.id}>
@@ -301,11 +349,21 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
                   ) : (
                     selectedProductDetails.prices.map((price) => {
                       const formattedPrice = formatCurrency(price.amount);
+                      // Usar priceId se disponível, senão usar currencyId ou id como fallback
+                      const priceIdentifier = price.priceId || price.id || price.currencyId;
+                      
+                      console.log("Preço disponível:", {
+                        priceId: price.priceId,
+                        id: price.id,
+                        currencyId: price.currencyId,
+                        amount: price.amount,
+                        usando: priceIdentifier
+                      });
                       
                       return (
                         <SelectItem 
-                          key={price.currencyId} 
-                          value={price.currencyId}
+                          key={priceIdentifier} 
+                          value={priceIdentifier}
                           textValue={formattedPrice}
                         >
                           {formattedPrice}
@@ -332,10 +390,10 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
             <div className="flex items-end">
               <Button 
                 onClick={handleAddProduct} 
-                disabled={!selectedProduct || !selectedPrice || loading}
+                disabled={!selectedProduct || !selectedPrice || addingProduct}
                 className="w-full"
               >
-                {loading ? (
+                {addingProduct ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                     Adicionando...
@@ -361,7 +419,6 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
                       <TableHead>Produto</TableHead>
                       <TableHead>Preço</TableHead>
                       <TableHead>Quantidade</TableHead>
-                      <TableHead>Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -373,18 +430,9 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
                           <TableCell>{itemProduct?.name || 'Produto desconhecido'}</TableCell>
                           <TableCell>{formatCurrency(item.price)}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{formatCurrency(item.totalPrice)}</TableCell>
                         </TableRow>
                       );
                     })}
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-right font-bold">Subtotal:</TableCell>
-                      <TableCell className="font-bold">{offer.subtotal ? formatCurrency(offer.subtotal) : 'R$ 0,00'}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-right font-bold">Total:</TableCell>
-                      <TableCell className="font-bold">{offer.total ? formatCurrency(offer.total) : 'R$ 0,00'}</TableCell>
-                    </TableRow>
                   </TableBody>
                 </Table>
               )}
@@ -402,41 +450,61 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RadioGroup 
-              value={selectedInstallment} 
-              onValueChange={setSelectedInstallment}
-              className="space-y-2"
-            >
-              {installments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhum parcelamento disponível.
-                </p>
-              ) : (
-                installments.map((installment) => (
-                  <div key={installment.id} className="flex items-center space-x-2 border rounded-md p-3">
-                    <RadioGroupItem value={installment.id} id={`installment-${installment.id}`} />
-                    <Label htmlFor={`installment-${installment.id}`} className="flex-1">
-                      {installment.installment}x {installment.discountPercentage > 0 ? `(-${installment.discountPercentage}%)` : ''}
-                    </Label>
+            {installmentApplied ? (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-md">
+                  <div className="flex items-center">
+                    <div>
+                      <h3 className="font-medium">Parcelamento aplicado</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {installments.find(i => i.id === selectedInstallment)?.installment || 0}x 
+                        {installments.find(i => i.id === selectedInstallment)?.discountPercentage 
+                          ? ` (-${installments.find(i => i.id === selectedInstallment)?.discountPercentage}%)` 
+                          : ''}
+                      </p>
+                    </div>
                   </div>
-                ))
-              )}
-            </RadioGroup>
-            
-            <Button 
-              onClick={handleApplyInstallment} 
-              disabled={!selectedInstallment || loading}
-              className="w-full mt-4"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Aplicando...
-                </>
-              ) : (
-                "Aplicar Parcelamento"
-              )}
-            </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <RadioGroup 
+                  value={selectedInstallment} 
+                  onValueChange={setSelectedInstallment}
+                  className="space-y-2"
+                >
+                  {installments.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      Nenhum parcelamento disponível.
+                    </p>
+                  ) : (
+                    installments.map((installment) => (
+                      <div key={installment.id} className="flex items-center space-x-2 border rounded-md p-3">
+                        <RadioGroupItem value={installment.id} id={`installment-${installment.id}`} />
+                        <Label htmlFor={`installment-${installment.id}`} className="flex-1">
+                          {installment.installment}x {installment.discountPercentage > 0 ? `(-${installment.discountPercentage}%)` : ''}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </RadioGroup>
+                
+                <Button 
+                  onClick={handleApplyInstallment} 
+                  disabled={!selectedInstallment || applyingInstallment}
+                  className="w-full mt-4"
+                >
+                  {applyingInstallment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Aplicando...
+                    </>
+                  ) : (
+                    "Aplicar Parcelamento"
+                  )}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -448,41 +516,61 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RadioGroup 
-              value={selectedOfferDuration} 
-              onValueChange={setSelectedOfferDuration}
-              className="space-y-2"
-            >
-              {offerDurations.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhuma duração disponível.
-                </p>
-              ) : (
-                offerDurations.map((duration) => (
-                  <div key={duration.id} className="flex items-center space-x-2 border rounded-md p-3">
-                    <RadioGroupItem value={duration.id} id={`duration-${duration.id}`} />
-                    <Label htmlFor={`duration-${duration.id}`} className="flex-1">
-                      {duration.months} meses {duration.discountPercentage > 0 ? `(-${duration.discountPercentage}%)` : ''}
-                    </Label>
+            {offerDurationApplied ? (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-md">
+                  <div className="flex items-center">
+                    <div>
+                      <h3 className="font-medium">Duração aplicada</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {offerDurations.find(d => d.id === selectedOfferDuration)?.months || 0} meses
+                        {offerDurations.find(d => d.id === selectedOfferDuration)?.discountPercentage 
+                          ? ` (-${offerDurations.find(d => d.id === selectedOfferDuration)?.discountPercentage}%)` 
+                          : ''}
+                      </p>
+                    </div>
                   </div>
-                ))
-              )}
-            </RadioGroup>
-            
-            <Button 
-              onClick={handleApplyOfferDuration} 
-              disabled={!selectedOfferDuration || loading}
-              className="w-full mt-4"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Aplicando...
-                </>
-              ) : (
-                "Aplicar Duração"
-              )}
-            </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <RadioGroup 
+                  value={selectedOfferDuration} 
+                  onValueChange={setSelectedOfferDuration}
+                  className="space-y-2"
+                >
+                  {offerDurations.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      Nenhuma duração disponível.
+                    </p>
+                  ) : (
+                    offerDurations.map((duration) => (
+                      <div key={duration.id} className="flex items-center space-x-2 border rounded-md p-3">
+                        <RadioGroupItem value={duration.id} id={`duration-${duration.id}`} />
+                        <Label htmlFor={`duration-${duration.id}`} className="flex-1">
+                          {duration.months} meses {duration.discountPercentage > 0 ? `(-${duration.discountPercentage}%)` : ''}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </RadioGroup>
+                
+                <Button 
+                  onClick={handleApplyOfferDuration} 
+                  disabled={!selectedOfferDuration || applyingDuration}
+                  className="w-full mt-4"
+                >
+                  {applyingDuration ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Aplicando...
+                    </>
+                  ) : (
+                    "Aplicar Duração"
+                  )}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

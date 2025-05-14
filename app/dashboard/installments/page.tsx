@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Edit, Trash2 } from "lucide-react"
-import { getInstallments, deleteInstallment, getPaymentMethods, type Installment, type PaymentMethod } from "@/lib/api-client"
+import { Plus, Search } from "lucide-react"
+import { getInstallments, getPaymentMethods, type Installment, type PaymentMethod } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function InstallmentsPage() {
@@ -53,25 +53,6 @@ export default function InstallmentsPage() {
     return method ? method.name : id
   }
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Tem certeza que deseja excluir esta parcela?")) {
-      try {
-        await deleteInstallment(id)
-        setInstallments(installments.filter((installment) => installment.id !== id))
-        toast({
-          title: "Sucesso",
-          description: "Parcela excluída com sucesso.",
-        })
-      } catch (error) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir a parcela.",
-          variant: "destructive",
-        })
-      }
-    }
-  }
-
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
@@ -112,13 +93,12 @@ export default function InstallmentsPage() {
                     <TableHead>Parcelas</TableHead>
                     <TableHead>Desconto (%)</TableHead>
                     <TableHead>Método de Pagamento</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredInstallments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                         Nenhuma parcela encontrada.
                       </TableCell>
                     </TableRow>
@@ -128,20 +108,6 @@ export default function InstallmentsPage() {
                         <TableCell className="font-medium">{installment.installment}x</TableCell>
                         <TableCell>{installment.discountPercentage}%</TableCell>
                         <TableCell>{getPaymentMethodName(installment.paymentMethodId)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.push(`/dashboard/installments/${installment.id}`)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(installment.id)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir</span>
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

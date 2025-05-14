@@ -143,6 +143,7 @@ export async function updateProductPrice(data: {
 export async function deleteProductPrice(productId: string, priceId: string): Promise<Product> {
   return apiRequest<Product>(`${CATALOG_API_URL}/products/${productId}/prices/${priceId}`, {
     method: "DELETE",
+    body: JSON.stringify({}),
   });
 }
 
@@ -160,6 +161,10 @@ export async function addProductDeliverable(data: {
 export async function deleteProductDeliverable(productId: string, deliverableId: string): Promise<Product> {
   return apiRequest<Product>(`${CATALOG_API_URL}/products/${productId}/deliverables/${deliverableId}`, {
     method: "DELETE",
+    body: JSON.stringify({
+      productId,
+      deliverableId
+    }),
   });
 }
 
@@ -178,6 +183,7 @@ export async function addProductGuideline(data: {
 export async function deleteProductGuideline(productId: string, guidelineId: string): Promise<Product> {
   return apiRequest<Product>(`${CATALOG_API_URL}/products/${productId}/guidelines/${guidelineId}`, {
     method: "DELETE",
+    body: JSON.stringify({}),
   });
 }
 

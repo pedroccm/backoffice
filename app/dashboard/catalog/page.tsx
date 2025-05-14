@@ -8,31 +8,41 @@ import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Plus, ListFilter, Filter } from "lucide-react"
-import { getProducts } from "@/lib/catalog-api"
-import type { Product } from "@/lib/catalog-api"
+import { getProducts, getCategories } from "@/lib/catalog-api"
+import type { Product, Category } from "@/lib/catalog-api"
 
 export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    async function loadProducts() {
+    async function loadData() {
       try {
         setLoading(true)
-        const data = await getProducts()
-        setProducts(data)
+        const [productsData, categoriesData] = await Promise.all([
+          getProducts(),
+          getCategories()
+        ])
+        setProducts(productsData)
+        setCategories(categoriesData)
       } catch (err) {
-        setError("Não foi possível carregar os produtos do catálogo.")
+        setError("Não foi possível carregar os dados do catálogo.")
         console.error(err)
       } finally {
         setLoading(false)
       }
     }
 
-    loadProducts()
+    loadData()
   }, [])
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find((c) => c.id === categoryId)
+    return category ? category.name : categoryId
+  }
 
   const handleAddProduct = () => {
     router.push("/dashboard/products/new")
@@ -97,7 +107,7 @@ export default function CatalogPage() {
                             {product.status === "ACTIVE" ? "Ativo" : "Inativo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{product.categoryId}</TableCell>
+                        <TableCell>{getCategoryName(product.categoryId)}</TableCell>
                         <TableCell>
                           <Button
                             variant="link"

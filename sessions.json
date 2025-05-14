@@ -1,62 +1,56 @@
 [
   {
-    "id": "afa1d3dd-c62d-4d95-a253-3b9068ab8fe9",
-    "oneTimeOfferId": "60dbeb61-4d8a-406b-b046-253fc4b6b789",
-    "recurrentOfferId": "53144edd-2379-4ca4-a3e1-7e4577231841",
-    "leadId": "c4213db3-e3a5-45e2-8e59-64a2b79447c6",
-    "expiresAt": "2025-05-14T14:11:25.428Z",
-    "updatedAt": "2025-05-13T14:11:25.489Z",
-    "createdAt": "2025-05-13T14:11:25.489Z",
-    "status": "CLOSED"
+    "id": "d58ee53f-c9d2-46e2-868a-bf4e53cc886a",
+    "leadId": "ae911ee8-255d-4fd9-b8b9-7d3f71049dff",
+    "oneTimeOfferId": "7c91975f-96c4-4fe3-ba54-a758e47c9278",
+    "recurrentOfferId": "3c213109-493d-4fe6-b050-736611e024d6",
+    "expiresAt": "2025-05-14T22:59:59.157Z",
+    "createdAt": "2025-05-13T22:59:59.186Z",
+    "updatedAt": "2025-05-13T23:00:00.210Z"
   },
   {
-    "id": "afa1d3dd-c62d-4d95-a253-3b9068ab8fe9",
-    "oneTimeOfferId": "60dbeb61-4d8a-406b-b046-253fc4b6b789",
-    "recurrentOfferId": "53144edd-2379-4ca4-a3e1-7e4577231841",
-    "leadId": "c4213db3-e3a5-45e2-8e59-64a2b79447c6",
-    "expiresAt": "2025-05-14T14:11:25.428Z",
-    "updatedAt": "2025-05-13T14:11:25.489Z",
-    "createdAt": "2025-05-13T14:11:25.489Z"
+    "id": "62bda37d-2ec3-4a1f-ab1f-aa3655df3558",
+    "leadId": "916ca859-a196-473f-9173-b16f5909a618",
+    "oneTimeOfferId": "c160ff2f-ac09-43d2-9fd2-cbf621302b86",
+    "recurrentOfferId": "327a02c9-d846-4a8b-b287-36fab02786ad",
+    "expiresAt": "2025-05-14T23:03:10.649Z",
+    "createdAt": "2025-05-13T23:03:10.681Z",
+    "updatedAt": "2025-05-13T23:03:11.415Z"
   },
   {
-    "id": "afa1d3dd-c62d-4d95-a253-3b9068ab8fe9",
-    "oneTimeOfferId": "60dbeb61-4d8a-406b-b046-253fc4b6b789",
-    "recurrentOfferId": "53144edd-2379-4ca4-a3e1-7e4577231841",
-    "leadId": "c4213db3-e3a5-45e2-8e59-64a2b79447c6",
-    "isActive": true,
-    "expiresAt": "2025-05-14T14:11:25.428Z",
-    "updatedAt": "2025-05-13T14:11:25.489Z",
-    "createdAt": "2025-05-13T14:11:25.489Z"
+    "id": "e1ee8c9e-9f2e-4744-904d-6a36097e718e",
+    "leadId": "0083a97c-d4e8-4c2c-b148-bda1c862d36c",
+    "oneTimeOfferId": "0cb37e20-ac7b-48be-960e-790037b0f2ad",
+    "recurrentOfferId": "3bcc5bf4-e378-4a69-b1d2-d3422fe44534",
+    "expiresAt": "2025-05-14T22:45:54.493Z",
+    "createdAt": "2025-05-13T22:45:54.523Z",
+    "updatedAt": "2025-05-13T23:04:44.575Z"
   },
   {
-    "id": "afa1d3dd-c62d-4d95-a253-3b9068ab8fe9",
-    "oneTimeOfferId": "60dbeb61-4d8a-406b-b046-253fc4b6b789",
-    "recurrentOfferId": "53144edd-2379-4ca4-a3e1-7e4577231841",
-    "leadId": "c4213db3-e3a5-45e2-8e59-64a2b79447c6",
-    "isActive": true,
-    "expiresAt": "2025-05-14T14:11:25.428Z",
-    "updatedAt": "2025-05-13T14:11:25.489Z",
-    "createdAt": "2025-05-13T14:11:25.489Z"
+    "id": "e951c2a2-ab02-4f7f-a31d-0ab7383d276e",
+    "leadId": "7f569ed3-8539-4d75-a347-8396fbab7d27",
+    "oneTimeOfferId": "48c8e04e-3448-4656-b2da-90cdeb6a4a4a",
+    "recurrentOfferId": "4a1275ff-8895-4f9d-9e48-72ada9d5f58e",
+    "expiresAt": "2025-05-14T23:12:49.300Z",
+    "createdAt": "2025-05-13T23:12:49.331Z",
+    "updatedAt": "2025-05-13T23:12:50.066Z"
   },
   {
-    "id": "afa1d3dd-c62d-4d95-a253-3b9068ab8fe9",
-    "oneTimeOfferId": "60dbeb61-4d8a-406b-b046-253fc4b6b789",
-    "recurrentOfferId": "53144edd-2379-4ca4-a3e1-7e4577231841",
-    "leadId": "c4213db3-e3a5-45e2-8e59-64a2b79447c6",
-    "isActive": true,
-    "expiresAt": "2025-05-14T14:11:25.428Z",
-    "updatedAt": "2025-05-13T14:11:25.489Z",
-    "createdAt": "2025-05-13T14:11:25.489Z"
+    "id": "64b6934e-d780-4379-8f12-fc48c4b67388",
+    "leadId": "6c35434d-377e-4e2a-9ec3-b1640c572d76",
+    "oneTimeOfferId": "4dbe862f-942d-4913-8620-37751a129bee",
+    "recurrentOfferId": "29d8bbb1-3a7a-418e-b30d-712bf97cdcbe",
+    "expiresAt": "2025-05-14T23:17:49.400Z",
+    "createdAt": "2025-05-13T23:17:49.438Z",
+    "updatedAt": "2025-05-13T23:17:50.017Z"
   },
   {
-    "id": "f63c5003-11fe-4e61-a9f0-e600d62159e6",
-    "oneTimeOfferId": "43afb609-bdfe-4a09-8857-41f0b16043c5",
-    "recurrentOfferId": "c4de320b-578e-473c-b897-daba77a8e1c6",
-    "leadId": "51c705ee-fdaa-48f3-bf33-fd3adb8d52f9",
-    "isActive": true,
-    "status": "PENDING",
-    "expiresAt": "2025-05-14T20:09:11.352Z",
-    "updatedAt": "2025-05-13T20:09:11.486Z",
-    "createdAt": "2025-05-13T20:09:11.486Z"
+    "id": "64c00fc7-4537-4c44-8aeb-7bca97bf6bf5",
+    "leadId": "722614e8-e6d2-4b40-939b-82843197398b",
+    "oneTimeOfferId": "acf46b8b-ba33-4238-8edd-a78d09b5458f",
+    "recurrentOfferId": "9269c692-9c5a-4f1c-a4e3-71bf88551dc1",
+    "expiresAt": "2025-05-14T22:26:37.905Z",
+    "createdAt": "2025-05-13T22:26:37.951Z",
+    "updatedAt": "2025-05-13T23:22:32.623Z"
   }
 ]

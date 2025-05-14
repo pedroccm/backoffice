@@ -71,8 +71,16 @@ export default function ProductsPage() {
   }
 
   const getCategoryName = (categoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId)
-    return category ? category.name : categoryId
+    console.log("Buscando categoria:", categoryId);
+    console.log("Categorias disponíveis:", categories);
+    
+    const category = categories.find((c) => c.id === categoryId);
+    if (category) {
+      return category.name;
+    } else {
+      console.log(`Categoria com ID ${categoryId} não encontrada!`);
+      return categoryId;
+    }
   }
 
   const formatPrice = (price: { amount: number; currencyId: string; modifierTypeId: string | null }) => {
@@ -134,16 +142,14 @@ export default function ProductsPage() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Categoria</TableHead>
-                    <TableHead>Preço</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProducts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         Nenhum produto encontrado.
                       </TableCell>
                     </TableRow>
@@ -152,17 +158,7 @@ export default function ProductsPage() {
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell>{product.productType === "ONE_TIME" ? "Único" : "Recorrente"}</TableCell>
-                        <TableCell>
-                          <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
-                            {product.status === "ACTIVE" ? "Ativo" : "Inativo"}
-                          </Badge>
-                        </TableCell>
                         <TableCell>{getCategoryName(product.categoryId)}</TableCell>
-                        <TableCell>
-                          {product.prices && product.prices.length > 0
-                            ? formatPrice(product.prices[0])
-                            : "Não definido"}
-                        </TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"

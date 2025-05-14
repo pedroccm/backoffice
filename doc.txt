@@ -2037,3 +2037,34 @@ Model
   "createdAt": "string",
   "updatedAt": "string"
 }
+PUT
+/sessions/{sessionId}/close
+
+Parameters
+Try it out
+Name	Description
+sessionId *
+string
+(path)
+sessionId
+Responses
+Response content type
+
+application/json
+Code	Description
+200	
+Default Response
+
+Example Value
+Model
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "leadId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "oneTimeOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "recurrentOfferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "status": "string",
+  "isActive": true,
+  "expiresAt": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}

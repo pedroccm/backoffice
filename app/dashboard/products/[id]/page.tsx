@@ -25,8 +25,19 @@ import {
   TableRow 
 } from "@/components/ui/table"
 import { useToast } from "@/components/ui/use-toast"
-import { getProductById, getCurrencies } from "@/lib/catalog-api"
-import type { Product, Currency } from "@/lib/catalog-api"
+import { 
+  getProductById, 
+  getCurrencies, 
+  getDeliverables, 
+  getModifierTypes,
+  deleteProductPrice,
+  deleteProductDeliverable,
+  deleteProductGuideline
+} from "@/lib/catalog-api"
+import type { Product, Currency, Deliverable, ModifierType } from "@/lib/catalog-api"
+import { AddPriceDialog } from "@/components/product/AddPriceDialog"
+import { AddDeliverableDialog } from "@/components/product/AddDeliverableDialog"
+import { AddGuidelineDialog } from "@/components/product/AddGuidelineDialog"
 
 export default function ProductDetailsPage() {
   const params = useParams()
@@ -34,32 +45,39 @@ export default function ProductDetailsPage() {
   
   const [product, setProduct] = useState<Product | null>(null)
   const [currencies, setCurrencies] = useState<Currency[]>([])
+  const [deliverables, setDeliverables] = useState<Deliverable[]>([])
+  const [modifierTypes, setModifierTypes] = useState<ModifierType[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const { toast } = useToast()
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true)
-        const [productData, currenciesData] = await Promise.all([
-          getProductById(productId),
-          getCurrencies()
-        ])
-        setProduct(productData)
-        setCurrencies(currenciesData)
-      } catch (error) {
-        console.error('Erro ao carregar dados do produto:', error)
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar produto",
-          description: "Não foi possível obter os detalhes do produto."
-        })
-      } finally {
-        setLoading(false)
-      }
+  // Função para buscar todos os dados necessários
+  async function loadData() {
+    try {
+      setLoading(true)
+      const [productData, currenciesData, deliverablesData, modifierTypesData] = await Promise.all([
+        getProductById(productId),
+        getCurrencies(),
+        getDeliverables(),
+        getModifierTypes()
+      ])
+      setProduct(productData)
+      setCurrencies(currenciesData)
+      setDeliverables(deliverablesData)
+      setModifierTypes(modifierTypesData)
+    } catch (error) {
+      console.error('Erro ao carregar dados do produto:', error)
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar produto",
+        description: "Não foi possível obter os detalhes do produto."
+      })
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     if (productId) {
       loadData()
     } else {
@@ -72,9 +90,133 @@ export default function ProductDetailsPage() {
     }
   }, [productId, toast])
 
+  // Adicionar log para verificar a estrutura dos dados
+  useEffect(() => {
+    if (product && deliverables.length > 0) {
+      console.log('Produto carregado:', product);
+      console.log('Entregáveis do produto:', product.deliverables);
+      console.log('Lista de entregáveis disponíveis:', deliverables);
+    }
+  }, [product, deliverables]);
+
   const getCurrencySymbol = (currencyId: string): string => {
     const currency = currencies.find(c => c.id === currencyId)
     return currency?.symbol || ""
+  }
+
+  const getModifierName = (modifierTypeId: string | null): string => {
+    if (!modifierTypeId) return "Nenhum"
+    const modifier = modifierTypes.find(m => m.id === modifierTypeId || m.key === modifierTypeId)
+    return modifier?.displayName || "Nenhum"
+  }
+
+  const getDeliverableName = (deliverableId: string): string => {
+    // Log para debug
+    console.log('Buscando entregável com ID:', deliverableId);
+    
+    // Verificar se a lista de entregáveis está carregada
+    if (!deliverables || deliverables.length === 0) {
+      console.log('Lista de entregáveis vazia ou não carregada');
+      return deliverableId;
+    }
+    
+    // Tentar encontrar o entregável pelo ID
+    const deliverable = deliverables.find(d => d.id === deliverableId);
+    console.log('Entregável encontrado:', deliverable);
+    
+    // Se encontrado, retornar o nome, caso contrário retornar o ID
+    if (deliverable && deliverable.name) {
+      return deliverable.name;
+    }
+    
+    // Se não encontrou, verificar se o objeto de entregável já é o objeto completo 
+    // (pode ocorrer dependendo de como a API retorna os dados)
+    if (typeof deliverableId === 'object' && (deliverableId as any).name) {
+      return (deliverableId as any).name;
+    }
+    
+    return deliverableId;
+  }
+
+  // Funções para lidar com remoção de itens
+  const handleDeletePrice = async (priceId: string) => {
+    try {
+      if (!product) return
+      
+      await deleteProductPrice(product.id, priceId)
+      toast({
+        title: "Preço removido",
+        description: "O preço foi removido com sucesso."
+      })
+      loadData() // Recarregar dados
+    } catch (error) {
+      console.error("Erro ao remover preço:", error)
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível remover o preço."
+      })
+    }
+  }
+
+  const handleDeleteDeliverable = async (deliverableId: string) => {
+    try {
+      if (!product) return
+      
+      console.log(`Tentando remover entregável ${deliverableId} do produto ${product.id}`);
+      
+      const result = await deleteProductDeliverable(product.id, deliverableId);
+      console.log('Resposta da API:', result);
+      
+      toast({
+        title: "Entregável removido",
+        description: "O entregável foi removido com sucesso."
+      });
+      
+      // Recarregar dados após um breve atraso para garantir que o servidor tenha processado a exclusão
+      setTimeout(() => {
+        loadData();
+      }, 500);
+    } catch (error) {
+      console.error("Erro ao remover entregável:", error);
+      
+      // Detalhar o erro se possível
+      let errorMessage = "Não foi possível remover o entregável.";
+      if (error instanceof Error) {
+        errorMessage += ` Detalhes: ${error.message}`;
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: errorMessage
+      });
+    }
+  }
+
+  const handleDeleteGuideline = async (guidelineId: string) => {
+    try {
+      if (!product) return
+      
+      await deleteProductGuideline(product.id, guidelineId)
+      toast({
+        title: "Diretriz removida",
+        description: "A diretriz foi removida com sucesso."
+      })
+      loadData() // Recarregar dados
+    } catch (error) {
+      console.error("Erro ao remover diretriz:", error)
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível remover a diretriz."
+      })
+    }
+  }
+
+  // Função para navegar para a página de edição
+  const handleEditProduct = () => {
+    router.push(`/dashboard/products/${productId}/edit`)
   }
 
   if (loading) {
@@ -102,10 +244,14 @@ export default function ProductDetailsPage() {
           <span className="sr-only">Voltar</span>
         </Button>
         <h1 className="text-3xl font-bold">Detalhes do Produto</h1>
+        <Button className="ml-auto" onClick={handleEditProduct}>
+          <Edit className="mr-2 h-4 w-4" />
+          Editar Produto
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle>Informações Gerais</CardTitle>
           </CardHeader>
@@ -150,24 +296,6 @@ export default function ProductDetailsPage() {
             </dl>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Ações</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              <Button className="justify-start">
-                <Edit className="mr-2 h-4 w-4" />
-                Editar Produto
-              </Button>
-              <Button variant="destructive" className="justify-start">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir Produto
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Tabs defaultValue="prices">
@@ -181,10 +309,12 @@ export default function ProductDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Preços</CardTitle>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Preço
-              </Button>
+              <AddPriceDialog 
+                productId={product.id} 
+                currencies={currencies} 
+                modifierTypes={modifierTypes} 
+                onPriceAdded={loadData} 
+              />
             </CardHeader>
             <CardContent>
               <Table>
@@ -206,15 +336,15 @@ export default function ProductDetailsPage() {
                   ) : (
                     product.prices.map((price, index) => (
                       <TableRow key={index}>
-                        <TableCell>{getCurrencySymbol(price.currencyId)} ({price.currencyId})</TableCell>
+                        <TableCell>{getCurrencySymbol(price.currencyId)}</TableCell>
                         <TableCell>{price.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
-                        <TableCell>{price.modifierTypeId || "Nenhum"}</TableCell>
+                        <TableCell>{getModifierName(price.modifierTypeId)}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => price.id && handleDeletePrice(price.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Excluir</span>
                           </Button>
@@ -232,43 +362,54 @@ export default function ProductDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Entregáveis</CardTitle>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Entregável
-              </Button>
+              <AddDeliverableDialog 
+                productId={product.id} 
+                deliverables={deliverables} 
+                onDeliverableAdded={loadData} 
+              />
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {product.deliverables.length === 0 ? (
+              {deliverables.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  Carregando entregáveis...
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-4">
-                        Nenhum entregável definido
-                      </TableCell>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ) : (
-                    product.deliverables.map((deliverable) => (
-                      <TableRow key={deliverable.id}>
-                        <TableCell className="font-medium">{deliverable.id}</TableCell>
-                        <TableCell>Descrição do entregável</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Remover</span>
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {product.deliverables.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center py-4">
+                          Nenhum entregável definido
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      product.deliverables.map((deliverable) => (
+                        <TableRow key={deliverable.id}>
+                          <TableCell className="font-medium">
+                            {getDeliverableName(deliverable.id)}
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteDeliverable(deliverable.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Remover</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -277,10 +418,10 @@ export default function ProductDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Diretrizes</CardTitle>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Diretriz
-              </Button>
+              <AddGuidelineDialog 
+                productId={product.id} 
+                onGuidelineAdded={loadData} 
+              />
             </CardHeader>
             <CardContent>
               <Table>
@@ -304,7 +445,11 @@ export default function ProductDetailsPage() {
                         <TableCell className="font-medium">{guideline.name}</TableCell>
                         <TableCell>{guideline.description}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteGuideline(guideline.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Remover</span>
                           </Button>
