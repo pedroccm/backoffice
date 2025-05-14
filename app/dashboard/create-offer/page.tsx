@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { CreateOneTimeOffer } from "./components/create-one-time-offer"
 import { CreateRecurrentOffer } from "./components/create-recurrent-offer" 
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function CreateOfferPage() {
+function CreateOfferContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("sessionId") || ""
   const leadId = searchParams.get("leadId") || ""
@@ -416,5 +416,13 @@ export default function CreateOfferPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function CreateOfferPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-6">Carregando...</div>}>
+      <CreateOfferContent />
+    </Suspense>
   )
 } 

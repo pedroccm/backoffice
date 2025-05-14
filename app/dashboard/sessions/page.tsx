@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import SessionMenu from "@/components/SessionMenu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function SessionsPage() {
+function SessionsContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("id");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -31,5 +31,13 @@ export default function SessionsPage() {
       </div>
       <SessionMenu initialSessionId={selectedSessionId} />
     </div>
+  );
+}
+
+export default function SessionsPage() {
+  return (
+    <Suspense fallback={<div className="flex flex-col gap-4">Carregando...</div>}>
+      <SessionsContent />
+    </Suspense>
   );
 } 
