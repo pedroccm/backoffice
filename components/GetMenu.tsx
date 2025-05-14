@@ -3,23 +3,27 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { ScrollArea } from "./ui/scroll-area";
+import { fetchCatalogData, fetchSalesData } from "@/lib/api-fetch";
+import { ApiResponseViewer } from "./ui/api-response-viewer";
 
-// URLs das APIs
-const SALES_API_URL = "https://api.sales.dev.mktlab.app";
-const CATALOG_API_URL = "https://api.catalog.dev.mktlab.app";
+// Tipo para definir endpoints
+interface ApiEndpoint {
+  name: string;
+  type: "sales" | "catalog";
+  endpoint: string;
+}
 
 // Endpoints GET sem parâmetros
-const endpoints = [
-  { name: "Coupons", url: `${SALES_API_URL}/coupons` },
-  { name: "Offer Durations", url: `${SALES_API_URL}/offer-durations` },
-  { name: "Installments", url: `${SALES_API_URL}/installments` },
-  { name: "Payment Methods", url: `${SALES_API_URL}/payment-methods` },
-  { name: "Products", url: `${CATALOG_API_URL}/products` },
-  { name: "Categories", url: `${CATALOG_API_URL}/categories` },
-  { name: "Currencies", url: `${CATALOG_API_URL}/currencies` },
-  { name: "Deliverables", url: `${CATALOG_API_URL}/deliverables` },
-  { name: "Modifier Types", url: `${CATALOG_API_URL}/modifier-types` },
+const endpoints: ApiEndpoint[] = [
+  { name: "Coupons", type: "sales", endpoint: "coupons" },
+  { name: "Offer Durations", type: "sales", endpoint: "offer-durations" },
+  { name: "Installments", type: "sales", endpoint: "installments" },
+  { name: "Payment Methods", type: "sales", endpoint: "payment-methods" },
+  { name: "Products", type: "catalog", endpoint: "products" },
+  { name: "Categories", type: "catalog", endpoint: "categories" },
+  { name: "Currencies", type: "catalog", endpoint: "currencies" },
+  { name: "Deliverables", type: "catalog", endpoint: "deliverables" },
+  { name: "Modifier Types", type: "catalog", endpoint: "modifier-types" },
 ];
 
 export default function GetMenu() {
@@ -27,14 +31,18 @@ export default function GetMenu() {
   const [loading, setLoading] = useState<boolean>(false);
   const [activeEndpoint, setActiveEndpoint] = useState<string | null>(null);
 
-  const fetchData = async (url: string, name: string) => {
+  const fetchData = async (endpoint: ApiEndpoint) => {
     setLoading(true);
-    setActiveEndpoint(name);
+    setActiveEndpoint(endpoint.name);
     setResponse("Carregando...");
 
     try {
-      const response = await fetch(url);
-      const data = await response.json();
+      let data;
+      if (endpoint.type === "catalog") {
+        data = await fetchCatalogData(endpoint.endpoint);
+      } else {
+        data = await fetchSalesData(endpoint.endpoint);
+      }
       setResponse(JSON.stringify(data, null, 2));
     } catch (error) {
       setResponse(`Erro ao obter dados: ${error instanceof Error ? error.message : String(error)}`);
@@ -55,7 +63,7 @@ export default function GetMenu() {
               <Button
                 key={endpoint.name}
                 variant={activeEndpoint === endpoint.name ? "default" : "outline"}
-                onClick={() => fetchData(endpoint.url, endpoint.name)}
+                onClick={() => fetchData(endpoint)}
                 disabled={loading && activeEndpoint !== endpoint.name}
               >
                 {endpoint.name}
@@ -65,18 +73,7 @@ export default function GetMenu() {
         </CardContent>
       </Card>
 
-      {response && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Resultado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px] w-full rounded-md border">
-              <pre className="p-4 text-sm">{response}</pre>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
+      {response && <ApiResponseViewer response={response} />}
     </div>
   );
 } 

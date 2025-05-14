@@ -2,6 +2,17 @@
 export const SALES_API_URL = "https://api.sales.dev.mktlab.app";
 export const CATALOG_API_URL = "https://api.catalog.dev.mktlab.app";
 
+// Interfaces comuns
+export interface SessionResponse {
+  id: string;
+  leadId: string;
+  oneTimeOfferId: string;
+  recurrentOfferId: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Função auxiliar para fazer requisições à API
 export async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
   // Verificar se a URL é relativa (API local) ou absoluta (API externa)
@@ -31,102 +42,68 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
 
     // Log para debug sobre a resposta
     console.debug(`[API-FETCH] Resposta de ${url}: status ${response.status}`);
-
+    
     if (!response.ok) {
-      // Tenta extrair mensagem de erro da resposta
-      let errorDetails = '';
-      
-      try {
-        const errorText = await response.text();
-        
-        // Verificar se há conteúdo na resposta
-        if (errorText.trim()) {
-          try {
-            // Tentar converter para JSON
-            const errorData = JSON.parse(errorText);
-            errorDetails = JSON.stringify(errorData);
-            console.error(`[API-FETCH] Erro na resposta de ${url}:`, errorData);
-          } catch (jsonError) {
-            // Se não for JSON válido, usar o texto bruto
-            errorDetails = errorText;
-            console.error(`[API-FETCH] Erro na resposta de ${url} (texto não-JSON):`, errorText);
-          }
-        } else {
-          errorDetails = '[Resposta vazia]';
-          console.error(`[API-FETCH] Erro na resposta de ${url}: Resposta vazia`);
-        }
-      } catch (e) {
-        errorDetails = '[Erro ao ler resposta]';
-        console.error(`[API-FETCH] Não foi possível extrair detalhes do erro de ${url}:`, e);
-      }
-      
-      // Tratamento especial para erros 404 na API externa do catálogo
-      if (isExternalCatalogApi && response.status === 404) {
-        console.warn(`[API-FETCH] Erro 404 na API externa do catálogo: ${url}`);
-        
-        // Verificar se a URL contém um ID para tentar uma abordagem alternativa
-        if (url.includes('/products/') && !url.includes('/products/find/')) {
-          const alternativeUrl = url.replace(/\/products\/([^\/]+)$/, '/products');
-          console.warn(`[API-FETCH] Tentando abordagem alternativa: ${alternativeUrl}`);
-          
-          try {
-            const body = options?.body ? JSON.parse(options.body as string) : {};
-            
-            // Assegurar que o ID que estava na URL está no corpo
-            const id = url.match(/\/products\/([^\/]+)$/)?.[1];
-            if (id && !body.id) {
-              body.id = id;
-            }
-            
-            const alternativeResponse = await fetch(alternativeUrl, {
-              ...options,
-              method: 'PUT',
-              body: JSON.stringify(body),
-              headers: options?.headers || {
-                "Content-Type": "application/json"
-              }
-            });
-            
-            if (alternativeResponse.ok) {
-              console.warn(`[API-FETCH] A abordagem alternativa foi bem-sucedida: ${alternativeUrl}`);
-              return alternativeResponse.json();
-            } else {
-              // Se a abordagem alternativa também falhar, lançar erro
-              console.error(`[API-FETCH] Falha na abordagem alternativa: ${alternativeResponse.status}`);
-              throw new Error(`API externa indisponível. Erro: ${alternativeResponse.status}. Por favor, tente novamente mais tarde.`);
-            }
-          } catch (altError) {
-            console.error(`[API-FETCH] Erro na abordagem alternativa:`, altError);
-            throw new Error(`Não foi possível se conectar à API externa. ${altError instanceof Error ? altError.message : String(altError)}`);
-          }
-        }
-      }
-      
-      // Lançar erro para qualquer outro caso
-      throw new Error(
-        `Erro na requisição: ${response.status} - ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`
-      );
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      return response.json();
-    } else {
-      console.warn(`[API-FETCH] Resposta não é JSON: ${contentType} de ${url}`);
-      // @ts-ignore - Permitir retornar texto se não for JSON
-      return response.text();
-    }
-  } catch (error: any) {
-    console.error(`[API-FETCH] Erro na requisição para ${url}:`, error);
-    
-    // Tratamento especial para erros de timeout ou aborts
-    if (error.name === 'AbortError') {
-      throw new Error(`Tempo limite excedido ao conectar com a API. Por favor, verifique sua conexão e tente novamente.`);
+      throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
     }
     
-    // Reenviar o erro original sem fallbacks
+    return await response.json();
+  } catch (error) {
+    console.error(`[API-FETCH] Erro ao fazer requisição para ${url}:`, error);
     throw error;
   }
+}
+
+// Funções específicas para manipulação de sessões
+export async function createSession(data: { name: string; salesforceLeadId: string }): Promise<SessionResponse> {
+  return apiRequest<SessionResponse>(`${SALES_API_URL}/sessions`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSessions(): Promise<SessionResponse[]> {
+  try {
+    const response = await fetch("/api/sessions");
+    
+    if (!response.ok) {
+      throw new Error(`Erro ao obter sessões: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.sessions || [];
+  } catch (error) {
+    console.error("Erro ao carregar sessões:", error);
+    throw error;
+  }
+}
+
+export async function saveSessionsToFile(sessions: SessionResponse[]): Promise<void> {
+  try {
+    const response = await fetch("/api/sessions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sessions }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ao salvar sessões: ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error("Erro ao salvar arquivo de sessões:", error);
+    throw error;
+  }
+}
+
+// Funções genéricas para obter dados das APIs
+export async function fetchCatalogData<T>(endpoint: string): Promise<T> {
+  return apiRequest<T>(`${CATALOG_API_URL}/${endpoint}`);
+}
+
+export async function fetchSalesData<T>(endpoint: string): Promise<T> {
+  return apiRequest<T>(`${SALES_API_URL}/${endpoint}`);
 }
 
 // Tipos baseados na documentação
@@ -307,13 +284,6 @@ export interface ModifierType {
 }
 
 // Funções para API de Sessions
-export async function createSession(data: { name: string; salesforceLeadId: string }): Promise<Session> {
-  return apiRequest<Session>(`${SALES_API_URL}/sessions`, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
 export async function getSessionByLeadId(leadId: string): Promise<Session> {
   return apiRequest<Session>(`${SALES_API_URL}/sessions/lead/${leadId}`);
 }
