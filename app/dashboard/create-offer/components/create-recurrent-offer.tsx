@@ -13,7 +13,6 @@ import {
   getOfferDurations, 
   getOfferById, 
   addProductToOffer,
-  applyFixedTerm,
   type Product, 
   type Installment, 
   type OfferDuration,
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/table"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Trash } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
 
 interface CreateRecurrentOfferProps {
   sessionId: string
@@ -63,9 +61,6 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
   
   const [offer, setOffer] = useState<Offer | null>(null)
   
-  const [isFixedTerm, setIsFixedTerm] = useState(false)
-  const [applyingFixedTerm, setApplyingFixedTerm] = useState(false)
-  
   // Carregar produtos, parcelamentos e durações
   useEffect(() => {
     async function loadData() {
@@ -82,11 +77,19 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
         
         // Carregar parcelamentos
         const installmentsData = await getInstallments()
-        setInstallments(installmentsData)
+        // Filtrar apenas o parcelamento com ID específico
+        const filteredInstallments = installmentsData.filter(installment => 
+          installment.id === "b3f1b212-d6e5-4a57-973d-347bc21af357"
+        )
+        setInstallments(filteredInstallments)
         
         // Carregar durações de oferta
         const offerDurationsData = await getOfferDurations()
-        setOfferDurations(offerDurationsData)
+        // Filtrar apenas a duração com ID específico
+        const filteredDurations = offerDurationsData.filter(duration => 
+          duration.id === "6e558f71-ab05-4c8b-9fa9-dad2abeb435f"
+        )
+        setOfferDurations(filteredDurations)
         
         // Carregar os detalhes da oferta atual
         const offerData = await getOfferById(offerId)
@@ -104,9 +107,6 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
           setSelectedOfferDuration(offerData.offerDurationId)
           setOfferDurationApplied(true)
         }
-        
-        // Verificar se a oferta já é fidelizada
-        setIsFixedTerm(!!offerData.isFixedTermOffer)
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error)
         toast({
@@ -307,37 +307,6 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
       const parts = formatted.split(',');
       const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       return `R$ ${integerPart},${parts[1] || '00'}`;
-    }
-  }
-
-  // Função para toggle de fidelização
-  const handleFixedTermToggle = async (value: boolean) => {
-    setApplyingFixedTerm(true)
-    
-    try {
-      const updatedOffer = await applyFixedTerm({
-        offerId,
-        isFixedTermOffer: value
-      })
-      
-      setOffer(updatedOffer)
-      setIsFixedTerm(value)
-      
-      toast({
-        title: value ? "Fidelização ativada" : "Fidelização desativada",
-        description: value ? "Oferta marcada como fidelizada com sucesso." : "Oferta desmarcada como fidelizada com sucesso."
-      })
-    } catch (error) {
-      console.error("Erro ao aplicar fidelização:", error)
-      // Reverter o toggle se houver erro
-      setIsFixedTerm(!value)
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status de fidelização da oferta.",
-        variant: "destructive"
-      })
-    } finally {
-      setApplyingFixedTerm(false)
     }
   }
 
@@ -613,31 +582,6 @@ export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecur
           </CardContent>
         </Card>
       </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Opções da Oferta</CardTitle>
-          <CardDescription>
-            Configure opções adicionais para esta oferta
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="fixed-term">Fidelizado</Label>
-              <p className="text-sm text-muted-foreground">
-                Ativa a fidelização do cliente nesta oferta
-              </p>
-            </div>
-            <Switch 
-              id="fixed-term"
-              checked={isFixedTerm}
-              onCheckedChange={handleFixedTermToggle}
-              disabled={applyingFixedTerm}
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 } 

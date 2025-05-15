@@ -190,15 +190,28 @@ export function Sidebar() {
                   </Link>
                   <Link href="/dashboard/create-offer" passHref legacyBehavior>
                     <Button
-                      variant={pathname.startsWith("/dashboard/create-offer") ? "secondary" : "ghost"}
+                      variant={pathname.startsWith("/dashboard/create-offer") && !pathname.startsWith("/dashboard/create-offer-fidelizada") ? "secondary" : "ghost"}
                       className={cn(
                         "justify-start",
-                        pathname.startsWith("/dashboard/create-offer") ? "sidebar-active" : "sidebar-item",
+                        pathname.startsWith("/dashboard/create-offer") && !pathname.startsWith("/dashboard/create-offer-fidelizada") ? "sidebar-active" : "sidebar-item",
                       )}
                       onClick={close}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Criar Oferta
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/create-offer-fidelizada" passHref legacyBehavior>
+                    <Button
+                      variant={pathname.startsWith("/dashboard/create-offer-fidelizada") ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start",
+                        pathname.startsWith("/dashboard/create-offer-fidelizada") ? "sidebar-active" : "sidebar-item",
+                      )}
+                      onClick={close}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar Oferta Fidelizada
                     </Button>
                   </Link>
                   <Link href="/dashboard/coupons" passHref legacyBehavior>

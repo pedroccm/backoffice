@@ -1729,3 +1729,71 @@ export async function getSessionById(sessionId: string): Promise<Session> {
     throw error;
   }
 }
+
+// Função para atualizar datas de uma oferta
+export async function updateOfferDates(data: {
+  offerId: string,
+  projectStartDate: string,
+  paymentStartDate: string,
+  payDay: number
+}): Promise<Offer> {
+  try {
+    const response = await fetch('/api/sales/offers', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Erro ao atualizar datas da oferta: ${response.status} - ${errorText}`);
+    }
+    
+    const offerData = await response.json();
+    console.log("Datas da oferta atualizadas com sucesso:", offerData);
+    
+    // Formatar resposta para o frontend
+    const offer: Offer = {
+      id: offerData.id,
+      leadId: offerData.leadId || "",
+      status: offerData.status,
+      type: offerData.type,
+      subtotal: offerData.subtotalPrice || offerData.subtotal || 0,
+      total: offerData.totalPrice || offerData.total || 0,
+      items: Array.isArray(offerData.offerItems) 
+        ? offerData.offerItems?.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            priceId: item.priceId,
+            price: item.price,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice
+          }))
+        : [],
+      couponId: offerData.couponId,
+      couponDiscountPercentage: offerData.couponDiscountPercentage,
+      couponDiscountTotal: offerData.couponDiscountTotal,
+      installmentId: offerData.installmentId,
+      installmentMonths: offerData.installmentMonths,
+      installmentDiscountPercentage: offerData.installmentDiscountPercentage,
+      installmentDiscountTotal: offerData.installmentDiscountTotal,
+      offerDurationId: offerData.offerDurationId,
+      offerDurationMonths: offerData.offerDurationMonths,
+      offerDurationDiscountPercentage: offerData.offerDurationDiscountPercentage,
+      offerDurationDiscountTotal: offerData.offerDurationDiscountTotal,
+      projectStartDate: offerData.projectStartDate,
+      paymentStartDate: offerData.paymentStartDate,
+      payDay: offerData.payDay,
+      isFixedTermOffer: offerData.isFixedTermOffer,
+      createdAt: offerData.createdAt,
+      updatedAt: offerData.updatedAt
+    };
+    
+    return offer;
+  } catch (error) {
+    console.error('Erro ao atualizar datas da oferta:', error);
+    throw error;
+  }
+}

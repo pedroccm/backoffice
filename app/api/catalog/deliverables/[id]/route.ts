@@ -3,17 +3,15 @@ import { CATALOG_API_URL } from '@/lib/api-fetch';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { productId: string, priceId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    // Obter os dados do corpo da requisição
-    const productId = params.productId;
-    const priceId = params.priceId;
+    const id = params.id;
     
-    console.log(`Removendo preço ${priceId} do produto ${productId}`);
+    console.log(`Removendo entregável ${id}`);
     
     // Fazer a requisição para a API externa
-    const apiResponse = await fetch(`${CATALOG_API_URL}/products/${productId}/prices/${priceId}`, {
+    const apiResponse = await fetch(`${CATALOG_API_URL}/deliverables/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -21,6 +19,7 @@ export async function DELETE(
           ? { 'Authorization': request.headers.get('Authorization') || '' } 
           : {}),
       },
+      body: JSON.stringify({ id }),
     });
     
     // Se a resposta não for bem-sucedida, trate o erro
@@ -35,7 +34,7 @@ export async function DELETE(
       );
     }
     
-    // Obter os dados e retornar com o mesmo status
+    // Tentar obter resposta JSON ou retornar sucesso simples
     try {
       const data = await apiResponse.json();
       return NextResponse.json(data, {
@@ -48,25 +47,9 @@ export async function DELETE(
       });
     }
   } catch (error) {
-    console.error('Erro ao remover preço do produto:', error);
+    console.error('Erro ao remover entregável:', error);
     
-    // Em ambiente de desenvolvimento, retornar dados simulados
-    const fallbackData = {
-      id: params.productId,
-      name: "Produto Simulado",
-      description: "Descrição do produto",
-      paymentType: "ONE_TIME",
-      status: "ACTIVE",
-      singleItemOnly: false,
-      categoryId: "cat-1",
-      prices: [], // Preço removido
-      deliverables: [],
-      guidelines: [],
-      createdBy: "system",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    return NextResponse.json(fallbackData, { status: 200 });
+    // Em ambiente de desenvolvimento, retornar sucesso simulado
+    return NextResponse.json({ success: true }, { status: 200 });
   }
 } 

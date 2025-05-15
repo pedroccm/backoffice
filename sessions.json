@@ -69,7 +69,8 @@
     "recurrentOfferId": "0d830f47-c4ce-4a9f-939a-75d440a0d82e",
     "expiresAt": "2025-05-15T12:07:13.582Z",
     "createdAt": "2025-05-14T12:07:13.610Z",
-    "updatedAt": "2025-05-14T12:07:15.346Z"
+    "updatedAt": "2025-05-14T20:31:41.114Z",
+    "isLoyalty": false
   },
   {
     "id": "9072cc20-c89c-46f5-9153-77614488a169",
@@ -79,5 +80,219 @@
     "expiresAt": "2025-05-15T12:14:27.420Z",
     "createdAt": "2025-05-14T12:14:27.480Z",
     "updatedAt": "2025-05-14T12:14:29.382Z"
+  },
+  {
+    "id": "6dc42fb0-fe85-4ac5-9f72-6f2a1e2aa080",
+    "leadId": "16249fe0-9d0b-43f8-a29d-bf4610a5028c",
+    "oneTimeOfferId": "7003aaf5-19e7-46b2-b69a-1ee5eee53de7",
+    "recurrentOfferId": "bbd2c3ad-de45-4296-9200-976d105adb11",
+    "expiresAt": "2025-05-15T19:55:42.268Z",
+    "createdAt": "2025-05-14T19:55:42.302Z",
+    "updatedAt": "2025-05-14T19:55:43.897Z"
+  },
+  {
+    "id": "d75e28a1-91f4-4f1c-aa1d-6d20a96cc0b7",
+    "leadId": "dace8767-6728-40fc-8bd0-4b45264316d2",
+    "oneTimeOfferId": "41dc5120-1d05-490e-8d1d-cf37b167b8d7",
+    "recurrentOfferId": "ca879ebf-7d0e-4972-9117-7eaaf602bbdf",
+    "expiresAt": "2025-05-15T19:57:40.826Z",
+    "createdAt": "2025-05-14T19:57:40.856Z",
+    "updatedAt": "2025-05-14T19:57:42.395Z"
+  },
+  {
+    "id": "57bfe02f-39cc-4b1d-94c7-e4dcec2d335e",
+    "leadId": "01fecede-1ecc-46a9-9164-2aeb289fd17e",
+    "oneTimeOfferId": "fe59d1cf-b124-4520-82fb-6efc3a00410e",
+    "recurrentOfferId": "a26e29f9-bb06-463b-955b-7a11dc353460",
+    "expiresAt": "2025-05-15T20:19:56.722Z",
+    "createdAt": "2025-05-14T20:19:56.782Z",
+    "updatedAt": "2025-05-14T20:19:57.909Z"
+  },
+  {
+    "id": "21e7a127-f870-4f82-8a23-222808a20b74",
+    "leadId": "95e71fb7-1190-47dd-827e-88e62bd652d4",
+    "oneTimeOfferId": "58a4e70d-c05c-4fa8-84ef-ba8b1954dbc6",
+    "recurrentOfferId": "7a6912c6-6585-4c67-aae7-55a2eba47c8e",
+    "expiresAt": "2025-05-15T20:21:12.094Z",
+    "createdAt": "2025-05-14T20:21:12.126Z",
+    "updatedAt": "2025-05-14T20:21:13.258Z"
+  },
+  {
+    "id": "6b7bef17-d3ba-45c8-af9d-5f8ad065392e",
+    "leadId": "dd8e8498-152f-4940-9743-77d8d1f44cb5",
+    "oneTimeOfferId": "2a3a2d29-a72f-41cb-9a88-b4a65a63fae0",
+    "recurrentOfferId": "0d34dd1e-93c2-4eeb-be38-f3b4b80af4ea",
+    "expiresAt": "2025-05-15T20:27:23.060Z",
+    "createdAt": "2025-05-14T20:27:23.095Z",
+    "updatedAt": "2025-05-14T20:27:24.710Z"
+  },
+  {
+    "id": "2df422b6-3edb-4b86-ae53-16b2fbc2ffc1",
+    "leadId": "8881d46e-868d-433c-8148-57f95dace16c",
+    "oneTimeOfferId": "defe0d17-32e9-46c4-85a7-006de5f7b0eb",
+    "recurrentOfferId": "c682d41c-5aaa-455f-8a7d-dfaed04f2619",
+    "expiresAt": "2025-05-15T20:30:26.764Z",
+    "createdAt": "2025-05-14T20:30:26.797Z",
+    "updatedAt": "2025-05-14T20:30:28.268Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "875bd516-ea72-4268-a500-96c0c6eff828",
+    "leadId": "e8628d4c-f662-4261-848b-7b30e7b8f190",
+    "oneTimeOfferId": "09c1690b-8fe1-4801-90b5-9ef985cc0285",
+    "recurrentOfferId": "2c8aeedd-4888-40dc-b487-f63d9c1bfae8",
+    "expiresAt": "2025-05-15T20:34:49.933Z",
+    "createdAt": "2025-05-14T20:34:49.963Z",
+    "updatedAt": "2025-05-14T20:34:51.081Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "d45ad374-d2b3-461a-96fe-4a0d97e3f3b4",
+    "leadId": "d8a6d41c-3b2b-4c80-b818-1dcfa1afc527",
+    "oneTimeOfferId": "a3d7f76c-fdf3-4dec-8e90-36699529dc97",
+    "recurrentOfferId": "e457d4d0-88cf-40c1-a70d-e4bec21e3ada",
+    "expiresAt": "2025-05-15T20:43:34.528Z",
+    "createdAt": "2025-05-14T20:43:34.561Z",
+    "updatedAt": "2025-05-14T20:43:36.092Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "cbb4870e-b9b5-4d35-ad1a-1dc83da8b141",
+    "leadId": "d91fddfd-ffd5-45d1-abc7-27ea12e22b48",
+    "oneTimeOfferId": "1528ae18-7fe4-43e9-b8ad-e00d61592824",
+    "recurrentOfferId": "58b51a22-eeb9-4ad5-b88f-95177b4e7f0b",
+    "expiresAt": "2025-05-15T20:43:59.517Z",
+    "createdAt": "2025-05-14T20:43:59.534Z",
+    "updatedAt": "2025-05-14T20:44:00.648Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "8254f60f-b27a-4fb4-90ee-a63c27a98e3b",
+    "leadId": "7fac2eb0-2024-4b37-8d9d-de245eef2834",
+    "oneTimeOfferId": "2f02f372-4807-44fe-b7de-a1471f22e4f7",
+    "recurrentOfferId": "f171f1a2-fa1e-4a9e-ab58-4a2a3fba55af",
+    "expiresAt": "2025-05-15T20:44:44.685Z",
+    "createdAt": "2025-05-14T20:44:44.894Z",
+    "updatedAt": "2025-05-14T20:44:46.003Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "6892e96a-b89d-4910-855a-9db745489f96",
+    "leadId": "fb729a6a-e3d0-4275-a90c-5420e9bc6510",
+    "oneTimeOfferId": "bcc2dcaa-ec00-46b6-8576-cbd3f1847e21",
+    "recurrentOfferId": "59049fee-5f72-4c36-aa38-223d2db57d40",
+    "expiresAt": "2025-05-15T20:45:31.973Z",
+    "createdAt": "2025-05-14T20:45:32.005Z",
+    "updatedAt": "2025-05-14T20:45:33.117Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "b2937862-c3aa-49a7-8031-b7d2007a34e8",
+    "leadId": "fbacdc6d-4f24-46b8-af4b-cb1a9fdf7ae7",
+    "oneTimeOfferId": "24ec13df-9652-45a8-b02b-4449bf1e0759",
+    "recurrentOfferId": "08947a76-4ec5-4ba6-935b-0e33ac2a8400",
+    "expiresAt": "2025-05-15T20:49:50.374Z",
+    "createdAt": "2025-05-14T20:49:50.408Z",
+    "updatedAt": "2025-05-14T20:49:51.931Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "840b8ab8-5e2b-4337-912c-56d1c4af3edc",
+    "leadId": "fa85016d-0918-4e7c-b4fe-f12a3e6632a2",
+    "oneTimeOfferId": "27f9e75a-4149-49bb-ab94-ec14b2cf5250",
+    "recurrentOfferId": "c53862fa-cd25-446d-a1d6-2989f43b1886",
+    "expiresAt": "2025-05-15T20:56:42.465Z",
+    "createdAt": "2025-05-14T20:56:42.499Z",
+    "updatedAt": "2025-05-14T20:56:43.974Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "3afab11b-056b-40b3-98b6-c581569004b4",
+    "leadId": "599e2a85-e8b3-4d57-b35f-f19edb347dec",
+    "oneTimeOfferId": "002b12ac-0e23-40b5-924a-a53051285d9f",
+    "recurrentOfferId": "58647ee0-2653-4de2-b456-3df846c5db8c",
+    "expiresAt": "2025-05-15T20:59:00.012Z",
+    "createdAt": "2025-05-14T20:59:00.077Z",
+    "updatedAt": "2025-05-14T20:59:01.571Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "1b161e3e-19f5-4d88-90ba-01148240e38e",
+    "leadId": "a46773e7-7a7a-4224-acc1-089be21cddd6",
+    "oneTimeOfferId": "1f1c869c-9860-4552-8270-a84ad500a52c",
+    "recurrentOfferId": "2e3574fd-5bac-4980-b884-72f7d3cf9029",
+    "expiresAt": "2025-05-15T21:00:06.765Z",
+    "createdAt": "2025-05-14T21:00:06.799Z",
+    "updatedAt": "2025-05-14T21:00:07.906Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "31eae038-e6b7-4953-b301-a83efff034f2",
+    "leadId": "ecf3c337-4e95-4590-802a-e6b9900d77a8",
+    "oneTimeOfferId": "f0361c4e-7dad-4ec1-af73-a9b4b12c804e",
+    "recurrentOfferId": "14090e05-4bba-4b54-94de-3382477ae648",
+    "expiresAt": "2025-05-15T21:03:16.598Z",
+    "createdAt": "2025-05-14T21:03:16.766Z",
+    "updatedAt": "2025-05-14T21:03:18.468Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "a19b8f7c-291c-4860-8b39-8b32d1890cbd",
+    "leadId": "9324e67a-57ac-419c-a1de-e28d0d16fdb9",
+    "oneTimeOfferId": "e1e582fe-c6b6-46a8-9d06-e9a2e27dfdec",
+    "recurrentOfferId": "347d833a-342b-4393-b90a-08448dc285de",
+    "expiresAt": "2025-05-15T21:06:54.492Z",
+    "createdAt": "2025-05-14T21:06:54.518Z",
+    "updatedAt": "2025-05-14T21:06:55.943Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "29ee7132-e4d2-4070-a49b-2090b6196544",
+    "leadId": "21a4abf0-fe63-413e-9f3a-aaa5f53a6ff7",
+    "oneTimeOfferId": "6f761a7b-2914-42d1-ac78-ab136d596ce9",
+    "recurrentOfferId": "46dc9d5f-4a44-4c1f-94bf-2380d639f74e",
+    "expiresAt": "2025-05-15T21:07:59.391Z",
+    "createdAt": "2025-05-14T21:07:59.461Z",
+    "updatedAt": "2025-05-14T21:08:00.560Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "abfa17ee-58f0-4b89-99af-92d265f91684",
+    "leadId": "2764df35-b10e-4839-8b88-0537e84f9285",
+    "oneTimeOfferId": "ef574c4e-dc5e-47c7-88c6-1018cbe762f9",
+    "recurrentOfferId": "7ec667a3-68b6-4ed4-9eec-25f884d2b107",
+    "expiresAt": "2025-05-15T21:08:13.452Z",
+    "createdAt": "2025-05-14T21:08:13.478Z",
+    "updatedAt": "2025-05-14T21:08:14.574Z",
+    "isLoyalty": false
+  },
+  {
+    "id": "c07efe0a-c0de-44b6-ba68-b834d744ffff",
+    "leadId": "368e1c28-a4b1-4586-832c-c7894d6064ab",
+    "oneTimeOfferId": "460d5a1d-c86f-45af-974f-0fdd5865155c",
+    "recurrentOfferId": "bcfe9563-5626-40f3-b98a-1fcb42499909",
+    "expiresAt": "2025-05-15T21:08:55.732Z",
+    "createdAt": "2025-05-14T21:08:55.771Z",
+    "updatedAt": "2025-05-14T21:08:56.873Z",
+    "isLoyalty": true
+  },
+  {
+    "id": "81000fc2-6a05-459d-95c4-2641cd2b4c00",
+    "leadId": "3b0c2172-27b8-42e8-83ae-718e5def6ab7",
+    "oneTimeOfferId": "b5e273da-b350-482c-a6b9-f01c697ada56",
+    "recurrentOfferId": "ddd6be42-f94b-4001-8a4b-51ffc105f7a7",
+    "expiresAt": "2025-05-15T21:19:44.177Z",
+    "createdAt": "2025-05-14T21:19:44.221Z",
+    "updatedAt": "2025-05-14T21:19:46.502Z"
+  },
+  {
+    "id": "51178e29-ab1b-4559-9e94-862df42aa452",
+    "leadId": "bfb43e2b-9f16-4179-a5e3-4af827465577",
+    "oneTimeOfferId": "bcd44de9-5a66-4dd5-9a60-bad08e388222",
+    "recurrentOfferId": "fe18ee4d-57fa-4a64-85fb-5037cf84e182",
+    "expiresAt": "2025-05-15T21:20:11.167Z",
+    "createdAt": "2025-05-14T21:20:11.208Z",
+    "updatedAt": "2025-05-14T21:20:12.340Z",
+    "isLoyalty": false
   }
 ]

@@ -80,9 +80,7 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
         
         // Carregar parcelamentos
         const installmentsData = await getInstallments()
-        // Mostrar apenas o parcelamento específico para produtos únicos
-        const filteredInstallments = installmentsData.filter(i => i.id === "b3f1b212-d6e5-4a57-973d-347bc21af357");
-        setOtInstallments(filteredInstallments)
+        setOtInstallments(installmentsData)
         
         // Carregar os detalhes da oferta atual
         console.log("Carregando oferta:", offerId);

@@ -17,7 +17,8 @@ import {
   type Installment, 
   type OfferDuration,
   type Offer, 
-  applyInstallment
+  applyInstallment,
+  applyOfferDuration
 } from "@/lib/api-client"
 import { 
   Table, 
@@ -30,13 +31,13 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Trash } from "lucide-react"
 
-interface CreateOneTimeOfferProps {
+interface CreateRecurrentOfferProps {
   sessionId: string
   offerId: string
   leadId: string
 }
 
-export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTimeOfferProps) {
+export function CreateRecurrentOffer({ sessionId, offerId, leadId }: CreateRecurrentOfferProps) {
   const { toast } = useToast()
   
   const [products, setProducts] = useState<Product[]>([])
@@ -50,51 +51,53 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
   const [applyingInstallment, setApplyingInstallment] = useState(false)
   const [applyingDuration, setApplyingDuration] = useState(false)
   
-  // Usando prefixos para evitar conflitos entre os componentes
-  const [otInstallments, setOtInstallments] = useState<Installment[]>([])
-  const [otSelectedInstallment, setOtSelectedInstallment] = useState<string>("")
-  const [otInstallmentApplied, setOtInstallmentApplied] = useState(false)
+  const [installments, setInstallments] = useState<Installment[]>([])
+  const [selectedInstallment, setSelectedInstallment] = useState<string>("")
+  const [installmentApplied, setInstallmentApplied] = useState(false)
   
-  const [otOfferDurations, setOtOfferDurations] = useState<OfferDuration[]>([])
-  const [otSelectedOfferDuration, setOtSelectedOfferDuration] = useState<string>("")
-  const [otOfferDurationApplied, setOtOfferDurationApplied] = useState(false)
+  const [offerDurations, setOfferDurations] = useState<OfferDuration[]>([])
+  const [selectedOfferDuration, setSelectedOfferDuration] = useState<string>("")
+  const [offerDurationApplied, setOfferDurationApplied] = useState(false)
   
   const [offer, setOffer] = useState<Offer | null>(null)
   
   // Carregar produtos, parcelamentos e durações
   useEffect(() => {
     async function loadData() {
-      console.log("======= CARREGANDO DADOS =======");
-      console.log("offerId:", offerId);
-      
       try {
-        // Carregar produtos (apenas one-time)
+        // Carregar produtos (apenas recorrentes)
         const productsData = await getProducts()
-        const oneTimeProducts = productsData
-          .filter(p => p.paymentType === "ONE_TIME")
+        const recurrentProducts = productsData
+          .filter(p => p.paymentType === "RECURRENT")
           // Filtrar apenas produtos que tenham pelo menos um preço definido
           .filter(p => p.prices && Array.isArray(p.prices) && p.prices.length > 0)
         
-        console.log(`Produtos com preço: ${oneTimeProducts.length} de ${productsData.filter(p => p.paymentType === "ONE_TIME").length} produtos one-time disponíveis`);
-        setProducts(oneTimeProducts)
+        console.log(`Produtos recorrentes com preço: ${recurrentProducts.length} de ${productsData.filter(p => p.paymentType === "RECURRENT").length} produtos recorrentes disponíveis`);
+        setProducts(recurrentProducts)
         
         // Carregar parcelamentos
         const installmentsData = await getInstallments()
-        // Mostrar apenas o parcelamento específico para produtos únicos
-        const filteredInstallments = installmentsData.filter(i => i.id === "b3f1b212-d6e5-4a57-973d-347bc21af357");
-        setOtInstallments(filteredInstallments)
+        setInstallments(installmentsData)
+        
+        // Carregar durações de oferta
+        const offerDurationsData = await getOfferDurations()
+        setOfferDurations(offerDurationsData)
         
         // Carregar os detalhes da oferta atual
-        console.log("Carregando oferta:", offerId);
         const offerData = await getOfferById(offerId)
-        console.log("Oferta carregada:", offerData);
-        console.log("Itens na oferta:", offerData.items ? offerData.items.length : 0);
+        console.log("Oferta recorrente carregada:", offerData);
+        console.log("Itens na oferta recorrente:", offerData.items ? offerData.items.length : 0);
         setOffer(offerData)
         
         // Verificar se já existem parcelamentos ou durações aplicados
         if (offerData.installmentId) {
-          setOtSelectedInstallment(offerData.installmentId)
-          setOtInstallmentApplied(true)
+          setSelectedInstallment(offerData.installmentId)
+          setInstallmentApplied(true)
+        }
+        
+        if (offerData.offerDurationId) {
+          setSelectedOfferDuration(offerData.offerDurationId)
+          setOfferDurationApplied(true)
         }
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error)
@@ -115,17 +118,6 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
       const productDetails = products.find(p => p.id === selectedProduct)
       setSelectedProductDetails(productDetails || null)
       setSelectedPrice("")
-      
-      if (productDetails) {
-        console.log("===== DETALHES DO PRODUTO SELECIONADO =====");
-        console.log("Produto ID:", productDetails.id);
-        console.log("Nome:", productDetails.name);
-        console.log("Preços:", productDetails.prices);
-        // Verificar se os preços têm o campo priceId
-        const hasAnyPriceId = productDetails.prices.some(price => price.priceId);
-        console.log("Algum preço tem priceId?", hasAnyPriceId);
-        console.log("===== FIM DETALHES =====");
-      }
     } else {
       setSelectedProductDetails(null)
     }
@@ -145,21 +137,12 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
     setAddingProduct(true)
     
     try {
-      console.log("======= ADICIONANDO PRODUTO =======");
-      console.log("Produto:", selectedProduct);
-      console.log("Preço:", selectedPrice);
-      console.log("Quantidade:", quantity);
-      
       const updatedOffer = await addProductToOffer(
         offerId,
         selectedProduct,
         selectedPrice,
         quantity
       )
-      
-      console.log("======= OFERTA ATUALIZADA =======");
-      console.log(JSON.stringify(updatedOffer, null, 2));
-      console.log("Itens na oferta:", updatedOffer.items ? updatedOffer.items.length : 0);
       
       setOffer(updatedOffer)
       
@@ -192,7 +175,7 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
   
   // Função para aplicar parcelamento
   const handleApplyInstallment = async () => {
-    if (!otSelectedInstallment) {
+    if (!selectedInstallment) {
       toast({
         title: "Parcelamento não selecionado",
         description: "Selecione um parcelamento para aplicar à oferta.",
@@ -206,11 +189,11 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
     try {
       const updatedOffer = await applyInstallment({
         offerId,
-        installmentId: otSelectedInstallment
+        installmentId: selectedInstallment
       })
       
       setOffer(updatedOffer)
-      setOtInstallmentApplied(true)
+      setInstallmentApplied(true)
       
       toast({
         title: "Parcelamento aplicado",
@@ -228,14 +211,63 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
     }
   }
   
-  // Função para limpar o parcelamento aplicado e aplicar um novo
+  // Função para aplicar duração da oferta
+  const handleApplyOfferDuration = async () => {
+    if (!selectedOfferDuration) {
+      toast({
+        title: "Duração não selecionada",
+        description: "Selecione uma duração para aplicar à oferta.",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    setApplyingDuration(true)
+    
+    try {
+      const updatedOffer = await applyOfferDuration({
+        offerId,
+        offerDurationId: selectedOfferDuration
+      })
+      
+      setOffer(updatedOffer)
+      setOfferDurationApplied(true)
+      
+      toast({
+        title: "Duração aplicada",
+        description: "Duração aplicada à oferta com sucesso."
+      })
+    } catch (error) {
+      console.error("Erro ao aplicar duração:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível aplicar a duração à oferta.",
+        variant: "destructive"
+      })
+    } finally {
+      setApplyingDuration(false)
+    }
+  }
+
+  // Função para permitir alterar o parcelamento aplicado
   const handleChangeInstallment = async () => {
     // Se já temos um novo parcelamento selecionado, aplicamos ele imediatamente
-    if (otSelectedInstallment && otInstallmentApplied) {
+    if (selectedInstallment && installmentApplied) {
       await handleApplyInstallment();
     } else {
       // Caso contrário, apenas limpamos a seleção anterior para permitir nova seleção
-      setOtInstallmentApplied(false);
+      setInstallmentApplied(false);
+    }
+  }
+  
+  // Função para permitir alterar a duração aplicada
+  const handleChangeOfferDuration = async () => {
+    // Se já temos uma nova duração selecionada, aplicamos ela imediatamente
+    if (selectedOfferDuration && offerDurationApplied) {
+      await handleApplyOfferDuration();
+    } else {
+      // Caso contrário, apenas limpamos a seleção anterior para permitir nova seleção
+      setOfferDurationApplied(false);
     }
   }
   
@@ -274,9 +306,9 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Adicionar Produtos Únicos</CardTitle>
+          <CardTitle>Adicionar Produtos Recorrentes</CardTitle>
           <CardDescription>
-            Selecione produtos de pagamento único para adicionar à oferta
+            Selecione produtos de pagamento recorrente para adicionar à oferta
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -289,7 +321,7 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
                 </SelectTrigger>
                 <SelectContent>
                   {products.length === 0 ? (
-                    <SelectItem value="empty" disabled>Nenhum produto com preço disponível</SelectItem>
+                    <SelectItem value="empty" disabled>Nenhum produto recorrente com preço disponível</SelectItem>
                   ) : (
                     products.map(product => (
                       <SelectItem key={product.id} value={product.id}>
@@ -376,7 +408,7 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
           {offer && (
             <div className="mt-6">
               <h3 className="text-lg font-medium mb-2">Produtos na Oferta</h3>
-              {offer.items.length === 0 ? (
+              {!offer.items || offer.items.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
                   Nenhum produto adicionado à oferta ainda.
                 </p>
@@ -409,7 +441,7 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
         </CardContent>
       </Card>
       
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Parcelamentos</CardTitle>
@@ -418,16 +450,16 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {otInstallmentApplied ? (
+            {installmentApplied ? (
               <div className="space-y-4">
                 <div className="p-4 border rounded-md">
                   <div className="flex items-center">
                     <div>
                       <h3 className="font-medium">Parcelamento aplicado</h3>
                       <p className="text-sm text-muted-foreground">
-                        {otInstallments.find(i => i.id === otSelectedInstallment)?.installment || 0}x 
-                        {otInstallments.find(i => i.id === otSelectedInstallment)?.discountPercentage 
-                          ? ` (-${otInstallments.find(i => i.id === otSelectedInstallment)?.discountPercentage}%)` 
+                        {installments.find(i => i.id === selectedInstallment)?.installment || 0}x 
+                        {installments.find(i => i.id === selectedInstallment)?.discountPercentage 
+                          ? ` (-${installments.find(i => i.id === selectedInstallment)?.discountPercentage}%)` 
                           : ''}
                       </p>
                     </div>
@@ -437,16 +469,16 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
             ) : (
               <>
                 <RadioGroup 
-                  value={otSelectedInstallment} 
-                  onValueChange={setOtSelectedInstallment}
+                  value={selectedInstallment} 
+                  onValueChange={setSelectedInstallment}
                   className="space-y-2"
                 >
-                  {otInstallments.length === 0 ? (
+                  {installments.length === 0 ? (
                     <p className="text-muted-foreground text-center py-4">
                       Nenhum parcelamento disponível.
                     </p>
                   ) : (
-                    otInstallments.map((installment) => (
+                    installments.map((installment) => (
                       <div key={installment.id} className="flex items-center space-x-2 border rounded-md p-3">
                         <RadioGroupItem value={installment.id} id={`installment-${installment.id}`} />
                         <Label htmlFor={`installment-${installment.id}`} className="flex-1">
@@ -459,7 +491,7 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
                 
                 <Button 
                   onClick={handleApplyInstallment} 
-                  disabled={!otSelectedInstallment || applyingInstallment}
+                  disabled={!selectedInstallment || applyingInstallment}
                   className="w-full mt-4"
                 >
                   {applyingInstallment ? (
@@ -469,6 +501,72 @@ export function CreateOneTimeOffer({ sessionId, offerId, leadId }: CreateOneTime
                     </>
                   ) : (
                     "Aplicar Parcelamento"
+                  )}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Duração da Oferta</CardTitle>
+            <CardDescription>
+              Selecione a duração desta oferta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {offerDurationApplied ? (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-md">
+                  <div className="flex items-center">
+                    <div>
+                      <h3 className="font-medium">Duração aplicada</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {offerDurations.find(d => d.id === selectedOfferDuration)?.months || 0} meses
+                        {offerDurations.find(d => d.id === selectedOfferDuration)?.discountPercentage 
+                          ? ` (-${offerDurations.find(d => d.id === selectedOfferDuration)?.discountPercentage}%)` 
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <RadioGroup 
+                  value={selectedOfferDuration} 
+                  onValueChange={setSelectedOfferDuration}
+                  className="space-y-2"
+                >
+                  {offerDurations.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      Nenhuma duração disponível.
+                    </p>
+                  ) : (
+                    offerDurations.map((duration) => (
+                      <div key={duration.id} className="flex items-center space-x-2 border rounded-md p-3">
+                        <RadioGroupItem value={duration.id} id={`duration-${duration.id}`} />
+                        <Label htmlFor={`duration-${duration.id}`} className="flex-1">
+                          {duration.months} meses {duration.discountPercentage > 0 ? `(-${duration.discountPercentage}%)` : ''}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </RadioGroup>
+                
+                <Button 
+                  onClick={handleApplyOfferDuration} 
+                  disabled={!selectedOfferDuration || applyingDuration}
+                  className="w-full mt-4"
+                >
+                  {applyingDuration ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Aplicando...
+                    </>
+                  ) : (
+                    "Aplicar Duração"
                   )}
                 </Button>
               </>

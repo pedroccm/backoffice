@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
-import { createOfferDuration } from "@/lib/api-client"
+import { createOfferDuration } from "@/lib/api-fetch"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function NewOfferDurationPage() {

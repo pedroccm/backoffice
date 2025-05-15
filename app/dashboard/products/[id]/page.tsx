@@ -94,8 +94,19 @@ export default function ProductDetailsPage() {
   useEffect(() => {
     if (product && deliverables.length > 0) {
       console.log('Produto carregado:', product);
-      console.log('Entregáveis do produto:', product.deliverables);
-      console.log('Lista de entregáveis disponíveis:', deliverables);
+      console.log('Entregáveis do produto (product.deliverables):', product.deliverables);
+      console.log('Lista de entregáveis disponíveis (deliverables):', deliverables);
+      
+      // Tentar encontrar correspondências entre os entregáveis do produto e a lista geral
+      product.deliverables.forEach(prodDeliverable => {
+        console.log('Analisando entregável do produto:', prodDeliverable);
+        // Tentar encontrar na lista geral de entregáveis
+        const matchingDeliverable = deliverables.find(d => 
+          d.id === prodDeliverable.id || 
+          d.id === prodDeliverable.deliverableId
+        );
+        console.log('Entregável correspondente na lista geral:', matchingDeliverable);
+      });
     }
   }, [product, deliverables]);
 
@@ -111,28 +122,47 @@ export default function ProductDetailsPage() {
   }
 
   const getDeliverableName = (deliverableRef: any): string => {
-    // Verificar se o objeto entregável tem a estrutura esperada
-    const deliverableId = deliverableRef?.deliverableId || deliverableRef;
+    // Verificar e mostrar a estrutura completa do objeto entregável para debug
+    console.log('Objeto entregável completo:', deliverableRef);
     
-    // Log para debug
-    console.log('Buscando entregável com ID:', deliverableId);
+    // A estrutura do deliverableRef pode ser diferente do que esperamos
+    // Vamos tentar descobrir o formato correto
+    
+    // Verificar se o objeto tem a propriedade 'deliverableId'
+    if (deliverableRef && deliverableRef.deliverableId) {
+      console.log('Encontrou deliverableId:', deliverableRef.deliverableId);
+      
+      // Procurar na lista de entregáveis usando deliverableId
+      const deliverable = deliverables.find(d => d.id === deliverableRef.deliverableId);
+      if (deliverable && deliverable.name) {
+        return deliverable.name;
+      }
+    }
+    
+    // Tentar usar diretamente o objeto como ID
+    if (deliverableRef && typeof deliverableRef === 'object') {
+      console.log('Tentando usar objeto diretamente');
+      // Mapear todas as propriedades para debug
+      Object.keys(deliverableRef).forEach(key => {
+        console.log(`Propriedade ${key}:`, deliverableRef[key]);
+      });
+    }
     
     // Verificar se a lista de entregáveis está carregada
     if (!deliverables || deliverables.length === 0) {
       console.log('Lista de entregáveis vazia ou não carregada');
-      return deliverableId;
+      return 'Entregável não encontrado';
     }
     
-    // Tentar encontrar o entregável pelo ID
+    // Último recurso: tentar encontrar pelo ID direto
+    const deliverableId = deliverableRef?.id || '';
     const deliverable = deliverables.find(d => d.id === deliverableId);
-    console.log('Entregável encontrado:', deliverable);
     
-    // Se encontrado, retornar o nome, caso contrário retornar o ID
     if (deliverable && deliverable.name) {
       return deliverable.name;
     }
     
-    return deliverableId;
+    return 'Entregável não encontrado';
   }
 
   // Funções para lidar com remoção de itens
@@ -158,10 +188,11 @@ export default function ProductDetailsPage() {
 
   const handleDeleteDeliverable = async (deliverableId: string) => {
     try {
-      if (!product) return
+      if (!product) return;
       
-      console.log(`Tentando remover entregável ${deliverableId} do produto ${product.id}`);
+      console.log(`Tentando remover entregável com ID: ${deliverableId} do produto ${product.id}`);
       
+      // Testar chamada com o ID real do entregável (não o ID da associação)
       const result = await deleteProductDeliverable(product.id, deliverableId);
       console.log('Resposta da API:', result);
       
@@ -170,14 +201,13 @@ export default function ProductDetailsPage() {
         description: "O entregável foi removido com sucesso."
       });
       
-      // Recarregar dados após um breve atraso para garantir que o servidor tenha processado a exclusão
+      // Recarregar dados após um breve atraso
       setTimeout(() => {
         loadData();
       }, 500);
     } catch (error) {
       console.error("Erro ao remover entregável:", error);
       
-      // Detalhar o erro se possível
       let errorMessage = "Não foi possível remover o entregável.";
       if (error instanceof Error) {
         errorMessage += ` Detalhes: ${error.message}`;
@@ -193,21 +223,36 @@ export default function ProductDetailsPage() {
 
   const handleDeleteGuideline = async (guidelineId: string) => {
     try {
-      if (!product) return
+      if (!product) return;
       
-      await deleteProductGuideline(product.id, guidelineId)
+      console.log(`Tentando remover diretriz ${guidelineId} do produto ${product.id}`);
+      
+      const result = await deleteProductGuideline(product.id, guidelineId);
+      console.log('Resposta da API:', result);
+      
       toast({
         title: "Diretriz removida",
         description: "A diretriz foi removida com sucesso."
-      })
-      loadData() // Recarregar dados
+      });
+      
+      // Recarregar dados após um breve atraso para garantir que o servidor tenha processado a exclusão
+      setTimeout(() => {
+        loadData();
+      }, 500);
     } catch (error) {
-      console.error("Erro ao remover diretriz:", error)
+      console.error("Erro ao remover diretriz:", error);
+      
+      // Detalhar o erro se possível
+      let errorMessage = "Não foi possível remover a diretriz.";
+      if (error instanceof Error) {
+        errorMessage += ` Detalhes: ${error.message}`;
+      }
+      
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível remover a diretriz."
-      })
+        description: errorMessage
+      });
     }
   }
 
@@ -377,34 +422,44 @@ export default function ProductDetailsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
+                      <TableHead>ID</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {product.deliverables.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={2} className="text-center py-4">
+                        <TableCell colSpan={3} className="text-center py-4">
                           Nenhum entregável definido
                         </TableCell>
                       </TableRow>
                     ) : (
-                      product.deliverables.map((deliverable) => (
-                        <TableRow key={deliverable.id}>
-                          <TableCell className="font-medium">
-                            {getDeliverableName(deliverable)}
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteDeliverable(deliverable.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Remover</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      product.deliverables.map((deliverable) => {
+                        console.log('Renderizando entregável:', deliverable);
+                        return (
+                          <TableRow key={deliverable.id}>
+                            <TableCell className="font-medium">
+                              {getDeliverableName(deliverable)}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {deliverable.deliverableId}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  console.log('Clicou para remover entregável com deliverableId:', deliverable.deliverableId);
+                                  handleDeleteDeliverable(deliverable.deliverableId);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Remover</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -428,33 +483,41 @@ export default function ProductDetailsPage() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>ID</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {product.guidelines.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-4">
+                      <TableCell colSpan={4} className="text-center py-4">
                         Nenhuma diretriz definida
                       </TableCell>
                     </TableRow>
                   ) : (
-                    product.guidelines.map((guideline) => (
-                      <TableRow key={guideline.id}>
-                        <TableCell className="font-medium">{guideline.name}</TableCell>
-                        <TableCell>{guideline.description}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteGuideline(guideline.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Remover</span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    product.guidelines.map((guideline) => {
+                      console.log('Renderizando diretriz:', guideline);
+                      return (
+                        <TableRow key={guideline.id}>
+                          <TableCell className="font-medium">{guideline.name}</TableCell>
+                          <TableCell>{guideline.description}</TableCell>
+                          <TableCell className="font-mono text-xs">{guideline.id}</TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                console.log('Clicou para remover diretriz com ID:', guideline.id);
+                                handleDeleteGuideline(guideline.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Remover</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

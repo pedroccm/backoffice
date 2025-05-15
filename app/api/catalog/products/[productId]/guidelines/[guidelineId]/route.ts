@@ -10,10 +10,13 @@ export async function DELETE(
     const productId = params.productId;
     const guidelineId = params.guidelineId;
     
-    console.log(`Removendo diretriz ${guidelineId} do produto ${productId}`);
+    console.log(`[API Route] Tentando remover diretriz - productId: ${productId}, guidelineId: ${guidelineId}`);
     
     // Fazer a requisição para a API externa
-    const apiResponse = await fetch(`${CATALOG_API_URL}/products/${productId}/guidelines/${guidelineId}`, {
+    const apiUrl = `${CATALOG_API_URL}/products/${productId}/guidelines/${guidelineId}`;
+    console.log(`[API Route] URL da requisição: ${apiUrl}`);
+    
+    const apiResponse = await fetch(apiUrl, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -21,13 +24,18 @@ export async function DELETE(
           ? { 'Authorization': request.headers.get('Authorization') || '' } 
           : {}),
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        productId,
+        guidelineId
+      }),
     });
+    
+    console.log(`[API Route] Status da resposta: ${apiResponse.status}`);
     
     // Se a resposta não for bem-sucedida, trate o erro
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text().catch(() => 'Erro desconhecido');
-      console.error(`Erro na API externa: ${apiResponse.status} - ${errorText}`);
+      console.error(`[API Route] Erro na API externa: ${apiResponse.status} - ${errorText}`);
       
       // Retornar erro com informações detalhadas
       return NextResponse.json(
@@ -37,13 +45,21 @@ export async function DELETE(
     }
     
     // Obter os dados e retornar com o mesmo status
-    const data = await apiResponse.json();
-    
-    return NextResponse.json(data, {
-      status: apiResponse.status || 200,
-    });
+    try {
+      const data = await apiResponse.json();
+      console.log(`[API Route] Resposta da API processada com sucesso`);
+      return NextResponse.json(data, {
+        status: apiResponse.status || 200,
+      });
+    } catch (error) {
+      // Se não tiver corpo JSON, apenas retornar sucesso
+      console.log(`[API Route] Sem resposta JSON, retornando sucesso simples`);
+      return NextResponse.json({ success: true }, {
+        status: apiResponse.status || 200,
+      });
+    }
   } catch (error) {
-    console.error('Erro ao remover diretriz do produto:', error);
+    console.error('[API Route] Erro ao remover diretriz do produto:', error);
     
     // Em ambiente de desenvolvimento, retornar dados simulados
     const fallbackData = {

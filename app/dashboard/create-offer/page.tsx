@@ -6,11 +6,12 @@ import { CreateOneTimeOffer } from "./components/create-one-time-offer"
 import { CreateRecurrentOffer } from "./components/create-recurrent-offer" 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getOfferById, getSessionById, createSession } from "@/lib/api-client"
+import { getOfferById, getSessionById, createSession, updateOfferDates } from "@/lib/api-client"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getDatePlusDaysForApi } from "@/lib/utils"
 
 function CreateOfferContent() {
   const searchParams = useSearchParams()
@@ -88,25 +89,54 @@ function CreateOfferContent() {
       const session = await createSession(formData)
       setSessionData(session)
       
+      // Configurar datas para as ofertas
+      const projectStartDate = getDatePlusDaysForApi(1); // Data atual + 1 dia
+      const paymentStartDate = getDatePlusDaysForApi(11); // Data atual + 11 dias
+      const payDay = 28;
+      
+      // Atualizar datas da oferta one-time
+      try {
+        await updateOfferDates({
+          offerId: session.oneTimeOfferId,
+          projectStartDate,
+          paymentStartDate,
+          payDay
+        });
+        console.log("Datas da oferta one-time atualizadas com sucesso");
+      } catch (oneTimeError) {
+        console.error("Erro ao atualizar datas da oferta one-time:", oneTimeError);
+        toast({
+          title: "Atenção",
+          description: "Houve um problema ao configurar datas da oferta única.",
+          variant: "destructive"
+        });
+        // Não bloqueamos o fluxo principal se houver erro
+      }
+      
+      // Atualizar datas da oferta recorrente
+      try {
+        await updateOfferDates({
+          offerId: session.recurrentOfferId,
+          projectStartDate,
+          paymentStartDate,
+          payDay
+        });
+        console.log("Datas da oferta recorrente atualizadas com sucesso");
+      } catch (recurrentError) {
+        console.error("Erro ao atualizar datas da oferta recorrente:", recurrentError);
+        toast({
+          title: "Atenção",
+          description: "Houve um problema ao configurar datas da oferta recorrente.",
+          variant: "destructive"
+        });
+        // Não bloqueamos o fluxo principal se houver erro
+      }
+      
       // Formatar a resposta da API para exibição
       const formattedResponse = JSON.stringify(session, null, 2)
       setSessionDetails(formattedResponse)
       setShowOfferDetails(true)
       setActiveDetail("session")
-      
-      // Salvar a sessão no arquivo sessions.json
-      try {
-        await fetch('/api/save-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(session),
-        });
-        console.log('Sessão salva em sessions.json');
-      } catch (saveError) {
-        console.error('Erro ao salvar sessão:', saveError);
-      }
       
       toast({
         title: "Sessão criada",
@@ -223,7 +253,7 @@ function CreateOfferContent() {
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
-        body: JSON.stringify({}) // Adicionando body vazio para resolver INVALID_JSON
+        body: JSON.stringify({})
       })
       
       if (!response.ok) {
@@ -261,13 +291,6 @@ function CreateOfferContent() {
   
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Criar Oferta</h1>
-        <p className="text-muted-foreground">
-          Adicione produtos às ofertas de pagamento único e recorrente
-        </p>
-      </div>
-      
       {!sessionData ? (
         <Card className="mb-6">
           <CardHeader>
